@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>New Booking | Grand Stay</title>
+
+    <link rel="stylesheet"
+          href="/css/style.css">
+
+</head>
+
+<body>
+
+<div class="app">
+
+    <aside class="sidebar">
+
+        <div class="brand">
+
+            <div class="brand-logo">
+                GS
+            </div>
+
+            <div>
+                <strong>Grand Stay</strong>
+                <span>HOTEL</span>
+            </div>
+
+        </div>
+
+
+        <nav>
+
+            <a href="/dashboard.html">
+                <span>⌂</span>
+                Dashboard
+            </a>
+
+            <a href="/rooms.html">
+                <span>▦</span>
+                Rooms
+            </a>
+
+            <a class="active"
+               href="/booking.html">
+
+                <span>＋</span>
+                New Booking
+
+            </a>
+
+            <a href="/bookings.html">
+
+                <span>☷</span>
+                Booking History
+
+            </a>
+
+        </nav>
+
+
+        <div class="sidebar-bottom">
+
+            <div class="hotel-info">
+
+                <strong>Grand Stay Hotel</strong>
+
+                <small>
+                    8 Floors · 24 Rooms
+                </small>
+
+            </div>
+
+            <a href="/" class="logout">
+                Logout
+            </a>
+
+        </div>
+
+    </aside>
+
+
+    <main class="main">
+
+        <header class="topbar">
+
+            <div>
+
+                <p class="eyebrow">
+                    RESERVATIONS
+                </p>
+
+                <h1>New Booking</h1>
+
+            </div>
+
+        </header>
+
+
+        <div class="booking-layout">
+
+
+            <section class="form-card">
+
+                <div class="card-heading">
+
+                    <div>
+
+                        <p class="eyebrow">
+                            GUEST DETAILS
+                        </p>
+
+                        <h2>
+                            Create Reservation
+                        </h2>
+
+                    </div>
+
+                    <div class="form-number">
+                        01
+                    </div>
+
+                </div>
+
+
+                <form action="/book"
+                      method="POST"
+                      id="bookingForm">
+
+
+                    <label>
+                        Guest Name
+                    </label>
+
+                    <input
+                        type="text"
+                        name="name"
+                        placeholder="Enter guest full name"
+                        required>
+
+
+                    <label>
+                        Phone Number
+                    </label>
+
+                    <input
+                        type="tel"
+                        name="phone"
+                        placeholder="Enter phone number"
+                        required>
+
+
+                    <label>
+                        Select Room
+                    </label>
+
+                    <select name="room"
+                            id="roomSelect"
+                            required>
+
+                        <option value="">
+                            Loading available rooms...
+                        </option>
+
+                    </select>
+
+
+                    <label>
+                        Number of Days
+                    </label>
+
+                    <input
+                        type="number"
+                        name="days"
+                        id="days"
+                        min="1"
+                        value="1"
+                        required>
+
+
+                    <div class="booking-total">
+
+                        <span>
+                            Estimated Total
+                        </span>
+
+                        <strong id="total">
+                            ₹0
+                        </strong>
+
+                    </div>
+
+
+                    <button type="submit"
+                            class="primary-btn">
+
+                        Confirm Booking
+
+                    </button>
+
+                </form>
+
+            </section>
+
+
+            <aside class="booking-info">
+
+                <div class="info-card">
+
+                    <div class="info-icon">
+                        ★
+                    </div>
+
+                    <h3>
+                        Grand Stay
+                    </h3>
+
+                    <p>
+                        Experience comfort,
+                        convenience and premium
+                        hospitality.
+                    </p>
+
+                </div>
+
+
+                <div class="pricing-card">
+
+                    <h3>
+                        Room Pricing
+                    </h3>
+
+                    <div>
+
+                        <span>
+                            Single Room
+                        </span>
+
+                        <strong>
+                            ₹1,500/night
+                        </strong>
+
+                    </div>
+
+                    <div>
+
+                        <span>
+                            Deluxe Room
+                        </span>
+
+                        <strong>
+                            ₹4,000/night
+                        </strong>
+
+                    </div>
+
+                </div>
+
+            </aside>
+
+        </div>
+
+    </main>
+
+</div>
+
+
+<script>
+
+let selectedPrice = 0;
+
+
+async function loadRooms() {
+
+    const select =
+        document.getElementById(
+            "roomSelect"
+        );
+
+
+    try {
+
+        const response =
+            await fetch(
+                "/available-rooms"
+            );
+
+        const rooms =
+            await response.json();
+
+
+        select.innerHTML =
+            `<option value="">
+                Select an available room
+             </option>`;
+
+
+        rooms.forEach(room => {
+
+            const option =
+                document.createElement(
+                    "option"
+                );
+
+
+            option.value =
+                room.roomNumber;
+
+
+            option.dataset.price =
+                room.price;
+
+
+            option.textContent =
+                `Room ${room.roomNumber}
+                 — ${room.type}
+                 — ₹${Number(
+                     room.price
+                 ).toLocaleString("en-IN")}/night`;
+
+
+            select.appendChild(
+                option
+            );
+
+        });
+
+
+        const urlParams =
+            new URLSearchParams(
+                window.location.search
+            );
+
+        const requestedRoom =
+            urlParams.get("room");
+
+
+        if (requestedRoom) {
+
+            select.value =
+                requestedRoom;
+
+            updatePrice();
+
+        }
+
+    }
+
+    catch (error) {
+
+        select.innerHTML =
+            `<option>
+                Unable to load rooms
+             </option>`;
+
+    }
+
+}
+
+
+function updatePrice() {
+
+    const select =
+        document.getElementById(
+            "roomSelect"
+        );
+
+
+    const option =
+        select.options[
+            select.selectedIndex
+        ];
+
+
+    selectedPrice =
+        Number(
+            option?.dataset?.price || 0
+        );
+
+
+    updateTotal();
+
+}
+
+
+function updateTotal() {
+
+    const days =
+        Number(
+            document.getElementById(
+                "days"
+            ).value || 0
+        );
+
+
+    const total =
+        selectedPrice * days;
+
+
+    document.getElementById(
+        "total"
+    ).textContent =
+        "₹" +
+        total.toLocaleString(
+            "en-IN"
+        );
+
+}
+
+
+document.getElementById(
+    "roomSelect"
+).addEventListener(
+    "change",
+    updatePrice
+);
+
+
+document.getElementById(
+    "days"
+).addEventListener(
+    "input",
+    updateTotal
+);
+
+
+loadRooms();
+
+</script>
+
+</body>
+</html>

@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>Dashboard | Grand Stay</title>
+
+    <link rel="stylesheet"
+          href="/css/style.css">
+
+</head>
+
+<body>
+
+<div class="app">
+
+    <aside class="sidebar">
+
+        <div class="brand">
+
+            <div class="brand-logo">
+                GS
+            </div>
+
+            <div>
+                <strong>Grand Stay</strong>
+                <span>HOTEL</span>
+            </div>
+
+        </div>
+
+
+        <nav>
+
+            <a class="active"
+               href="/dashboard.html">
+
+                <span>⌂</span>
+                Dashboard
+
+            </a>
+
+            <a href="/rooms.html">
+
+                <span>▦</span>
+                Rooms
+
+            </a>
+
+            <a href="/booking.html">
+
+                <span>＋</span>
+                New Booking
+
+            </a>
+
+            <a href="/bookings.html">
+
+                <span>☷</span>
+                Booking History
+
+            </a>
+
+        </nav>
+
+
+        <div class="sidebar-bottom">
+
+            <div class="hotel-info">
+
+                <strong>Grand Stay Hotel</strong>
+
+                <small>
+                    8 Floors · 24 Rooms
+                </small>
+
+            </div>
+
+            <a href="/" class="logout">
+                Logout
+            </a>
+
+        </div>
+
+    </aside>
+
+
+    <main class="main">
+
+        <header class="topbar">
+
+            <div>
+
+                <p class="eyebrow">
+                    HOTEL MANAGEMENT
+                </p>
+
+                <h1>Dashboard</h1>
+
+            </div>
+
+            <div class="date-box">
+                <span>●</span>
+                System Online
+            </div>
+
+        </header>
+
+
+        <section class="welcome">
+
+            <div>
+
+                <p class="eyebrow">
+                    WELCOME TO GRAND STAY
+                </p>
+
+                <h2>
+                    Manage your hotel
+                    with ease.
+                </h2>
+
+                <p>
+                    Monitor rooms, manage reservations
+                    and keep track of your hotel
+                    operations from one place.
+                </p>
+
+            </div>
+
+            <div class="welcome-icon">
+                ★
+            </div>
+
+        </section>
+
+
+        <!-- STATISTICS -->
+
+        <section class="stats">
+
+            <div class="stat-card">
+
+                <div class="stat-icon">
+                    ▦
+                </div>
+
+                <div>
+
+                    <span>Total Rooms</span>
+
+                    <strong id="totalRooms">
+                        —
+                    </strong>
+
+                </div>
+
+            </div>
+
+
+            <div class="stat-card available-card">
+
+                <div class="stat-icon">
+                    ✓
+                </div>
+
+                <div>
+
+                    <span>Available</span>
+
+                    <strong id="availableRooms">
+                        —
+                    </strong>
+
+                </div>
+
+            </div>
+
+
+            <div class="stat-card booked-card">
+
+                <div class="stat-icon">
+                    !
+                </div>
+
+                <div>
+
+                    <span>Booked</span>
+
+                    <strong id="bookedRooms">
+                        —
+                    </strong>
+
+                </div>
+
+            </div>
+
+
+            <div class="stat-card">
+
+                <div class="stat-icon">
+                    ☷
+                </div>
+
+                <div>
+
+                    <span>Total Bookings</span>
+
+                    <strong id="totalBookings">
+                        —
+                    </strong>
+
+                </div>
+
+            </div>
+
+
+            <div class="stat-card revenue-card">
+
+                <div class="stat-icon">
+                    ₹
+                </div>
+
+                <div>
+
+                    <span>Total Revenue</span>
+
+                    <strong id="revenue">
+                        —
+                    </strong>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- QUICK ACTIONS -->
+
+        <section>
+
+            <div class="section-heading">
+
+                <div>
+
+                    <p class="eyebrow">
+                        QUICK ACTIONS
+                    </p>
+
+                    <h2>Hotel Operations</h2>
+
+                </div>
+
+            </div>
+
+
+            <div class="action-grid">
+
+                <a href="/rooms.html"
+                   class="action-card">
+
+                    <div class="action-icon">
+                        ▦
+                    </div>
+
+                    <div>
+
+                        <h3>View Rooms</h3>
+
+                        <p>
+                            Check all 24 hotel rooms
+                        </p>
+
+                    </div>
+
+                    <span>→</span>
+
+                </a>
+
+
+                <a href="/booking.html"
+                   class="action-card">
+
+                    <div class="action-icon">
+                        ＋
+                    </div>
+
+                    <div>
+
+                        <h3>New Booking</h3>
+
+                        <p>
+                            Create a new reservation
+                        </p>
+
+                    </div>
+
+                    <span>→</span>
+
+                </a>
+
+
+                <a href="/bookings.html"
+                   class="action-card">
+
+                    <div class="action-icon">
+                        ☷
+                    </div>
+
+                    <div>
+
+                        <h3>Booking History</h3>
+
+                        <p>
+                            View all reservations
+                        </p>
+
+                    </div>
+
+                    <span>→</span>
+
+                </a>
+
+            </div>
+
+        </section>
+
+
+        <!-- ROOM STATUS -->
+
+        <section class="dashboard-section">
+
+            <div class="section-heading">
+
+                <div>
+
+                    <p class="eyebrow">
+                        ROOM MANAGEMENT
+                    </p>
+
+                    <h2>Room Status</h2>
+
+                </div>
+
+                <a href="/rooms.html"
+                   class="view-link">
+
+                    View All Rooms →
+
+                </a>
+
+            </div>
+
+
+            <div id="roomGrid"
+                 class="mini-room-grid">
+
+                <div class="loading">
+                    Loading rooms...
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- RECENT BOOKINGS -->
+
+        <section class="dashboard-section">
+
+            <div class="section-heading">
+
+                <div>
+
+                    <p class="eyebrow">
+                        RESERVATIONS
+                    </p>
+
+                    <h2>Recent Bookings</h2>
+
+                </div>
+
+                <a href="/bookings.html"
+                   class="view-link">
+
+                    View History →
+
+                </a>
+
+            </div>
+
+
+            <div class="table-container">
+
+                <table>
+
+                    <thead>
+
+                    <tr>
+
+                        <th>ID</th>
+                        <th>Guest</th>
+                        <th>Room</th>
+                        <th>Days</th>
+                        <th>Total</th>
+
+                    </tr>
+
+                    </thead>
+
+                    <tbody id="recentBookings">
+
+                    <tr>
+
+                        <td colspan="5"
+                            class="loading">
+
+                            Loading bookings...
+
+                        </td>
+
+                    </tr>
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </section>
+
+    </main>
+
+</div>
+
+
+<script>
+
+async function loadDashboard() {
+
+    try {
+
+        const response =
+            await fetch("/dashboard-data");
+
+        const data =
+            await response.json();
+
+
+        if (data.error) {
+
+            throw new Error(data.error);
+
+        }
+
+
+        document.getElementById(
+            "totalRooms"
+        ).textContent =
+            data.totalRooms;
+
+
+        document.getElementById(
+            "availableRooms"
+        ).textContent =
+            data.availableRooms;
+
+
+        document.getElementById(
+            "bookedRooms"
+        ).textContent =
+            data.bookedRooms;
+
+
+        document.getElementById(
+            "totalBookings"
+        ).textContent =
+            data.totalBookings;
+
+
+        document.getElementById(
+            "revenue"
+        ).textContent =
+            "₹" +
+            Number(data.revenue)
+                .toLocaleString("en-IN");
+
+
+        loadRooms(data.rooms);
+
+        loadRecentBookings(
+            data.recentBookings
+        );
+
+    }
+
+    catch (error) {
+
+        console.error(error);
+
+        document.getElementById(
+            "roomGrid"
+        ).innerHTML =
+            `<div class="error">
+                Unable to load room data.
+             </div>`;
+
+    }
+
+}
+
+
+function loadRooms(rooms) {
+
+    const grid =
+        document.getElementById(
+            "roomGrid"
+        );
+
+    grid.innerHTML = "";
+
+
+    rooms.forEach(room => {
+
+        const card =
+            document.createElement("div");
+
+        card.className =
+            "mini-room " +
+            (room.available
+                ? "room-available"
+                : "room-booked");
+
+
+        card.innerHTML = `
+
+            <div class="room-number">
+                ${room.roomNumber}
+            </div>
+
+            <div class="room-info">
+
+                <strong>
+                    ${room.type}
+                </strong>
+
+                <small>
+                    Floor ${room.floor}
+                </small>
+
+            </div>
+
+            <span class="status-pill
+                ${room.available
+                    ? "available"
+                    : "booked"}">
+
+                ${room.available
+                    ? "Available"
+                    : "Booked"}
+
+            </span>
+
+        `;
+
+        grid.appendChild(card);
+
+    });
+
+}
+
+
+function loadRecentBookings(bookings) {
+
+    const tbody =
+        document.getElementById(
+            "recentBookings"
+        );
+
+    tbody.innerHTML = "";
+
+
+    if (bookings.length === 0) {
+
+        tbody.innerHTML = `
+
+            <tr>
+
+                <td colspan="5"
+                    class="empty">
+
+                    No bookings yet.
+
+                </td>
+
+            </tr>
+
+        `;
+
+        return;
+    }
+
+
+    bookings.forEach(booking => {
+
+        const row =
+            document.createElement("tr");
+
+
+        row.innerHTML = `
+
+            <td>
+                #${booking.bookingId}
+            </td>
+
+            <td>
+                <strong>
+                    ${booking.name}
+                </strong>
+            </td>
+
+            <td>
+                Room ${booking.room}
+            </td>
+
+            <td>
+                ${booking.days}
+            </td>
+
+            <td>
+                ₹${Number(
+                    booking.total
+                ).toLocaleString("en-IN")}
+            </td>
+
+        `;
+
+        tbody.appendChild(row);
+
+    });
+
+}
+
+
+loadDashboard();
+
+setInterval(
+    loadDashboard,
+    10000
+);
+
+</script>
+
+</body>
+</html>
