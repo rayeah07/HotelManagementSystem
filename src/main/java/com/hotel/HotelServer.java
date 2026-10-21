@@ -3,2555 +3,3160 @@ package com.hotel;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 
-import java.io.*;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
-import java.sql.*;
-import java.util.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.sql.Timestamp;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 
 public class HotelServer {
 
-    public static void main(String[] args) throws Exception {
+    private static final Path WEB =
+            Paths.get("webapp")
+                    .toAbsolutePath()
+                    .normalize();
+
+    private static final Map<String, Double> SERVICES =
+            new LinkedHashMap<>();
+
+    static {
+
+        SERVICES.put("Breakfast", 300.0);
+        SERVICES.put("Lunch", 500.0);
+        SERVICES.put("Dinner", 600.0);
+        SERVICES.put("Tea / Coffee", 150.0);
+        SERVICES.put("Extra Bed", 800.0);
+        SERVICES.put("Laundry", 250.0);
+        SERVICES.put("Room Cleaning", 200.0);
+    }
+
+
+    public static void main(String[] args)
+            throws Exception {
 
         HttpServer server =
                 HttpServer.create(
-                        new InetSocketAddress(8080), 0
+                        new InetSocketAddress(8080),
+                        0
                 );
 
-        server.createContext("/", HotelServer::home);
-        server.createContext("/login", HotelServer::login);
 
-        server.createContext("/dashboard.html",
-                HotelServer::dashboard);
+        // PAGES
 
-        server.createContext("/rooms.html",
-                HotelServer::rooms);
+        server.createContext(
+                "/",
+                exchange ->
+                        serveFile(exchange, "index.html")
+        );
 
-        server.createContext("/booking.html",
-                HotelServer::booking);
+        server.createContext(
+                "/login",
+                HotelServer::login
+        );
 
-        server.createContext("/bookings.html",
-                HotelServer::bookings);
+        server.createContext(
+                "/dashboard.html",
+                exchange ->
+                        serveFile(
+                                exchange,
+                                "dashboard.html"
+                        )
+        );
 
-        server.createContext("/css/style.css",
-                HotelServer::css);
+        server.createContext(
+                "/rooms.html",
+                exchange ->
+                        serveFile(
+                                exchange,
+                                "rooms.html"
+                        )
+        );
 
-        server.createContext("/dashboard-data",
-                HotelServer::dashboardData);
+        server.createContext(
+                "/booking.html",
+                exchange ->
+                        serveFile(
+                                exchange,
+                                "booking.html"
+                        )
+        );
 
-        server.createContext("/all-rooms",
-                HotelServer::allRooms);
+        server.createContext(
+                "/bookings.html",
+                exchange ->
+                        serveFile(
+                                exchange,
+                                "bookings.html"
+                        )
+        );
 
-        server.createContext("/available-rooms",
-                HotelServer::availableRooms);
+        server.createContext(
+                "/settings.html",
+                exchange ->
+                        serveFile(
+                                exchange,
+                                "settings.html"
+                        )
+        );
 
-        server.createContext("/booking-history",
-                HotelServer::bookingHistory);
+        server.createContext(
+                "/css/style.css",
+                exchange ->
+                        serveFile(
+                                exchange,
+                                "css/style.css"
+                        )
+        );
 
-        server.createContext("/book",
-                HotelServer::book);
 
-        // NEW BOOKING MANAGEMENT FEATURES
-        server.createContext("/cancel-booking", HotelServer::cancelBooking);
-        server.createContext("/checkout", HotelServer::checkout);
-        server.createContext("/room-service", HotelServer::roomService);
-        server.createContext("/service-list", HotelServer::serviceList);
-        server.createContext("/invoice", HotelServer::invoice);
-        server.createContext("/invoice-pdf", HotelServer::invoicePdf);
+        // API ROUTES
+
+        server.createContext(
+                "/dashboard-data",
+                HotelServer::dashboardData
+        );
+
+        server.createContext(
+                "/all-rooms",
+                HotelServer::allRooms
+        );
+
+        server.createContext(
+                "/available-rooms",
+                HotelServer::availableRooms
+        );
+
+        server.createContext(
+                "/booking-history",
+                HotelServer::bookingHistory
+        );
+
+        server.createContext(
+                "/book",
+                HotelServer::book
+        );
+
+        server.createContext(
+                "/cancel-booking",
+                HotelServer::cancelBooking
+        );
+
+        server.createContext(
+                "/checkout",
+                HotelServer::checkout
+        );
+
+        server.createContext(
+                "/room-service",
+                HotelServer::roomService
+        );
+
+        server.createContext(
+                "/service-list",
+                HotelServer::serviceList
+        );
+
+        server.createContext(
+                "/invoice",
+                HotelServer::invoice
+        );
+
+        server.createContext(
+                "/invoice-pdf",
+                HotelServer::invoicePdf
+        );
+
+        server.createContext(
+                "/add-floor",
+                HotelServer::addFloor
+        );
+
+        server.createContext(
+                "/delete-floor",
+                HotelServer::deleteFloor
+        );
+
 
         server.start();
 
+
         System.out.println();
-        System.out.println("==========================================");
-        System.out.println("          GRAND STAY HOTEL");
-        System.out.println("==========================================");
-        System.out.println("Server running at:");
-        System.out.println("http://localhost:8080");
+        System.out.println(
+                "=========================================="
+        );
+        System.out.println(
+                "          GRAND STAY HOTEL"
+        );
+        System.out.println(
+                "=========================================="
+        );
+        System.out.println(
+                "Server running at:"
+        );
+        System.out.println(
+                "http://localhost:8080"
+        );
         System.out.println();
-        System.out.println("24 Rooms | 8 Floors");
-        System.out.println("2 Single + 1 Deluxe per floor");
+        System.out.println(
+                "24 Rooms | 8 Floors"
+        );
+        System.out.println(
+                "2 Single + 1 Deluxe per floor"
+        );
         System.out.println();
-        System.out.println("Press Ctrl+C to stop the server.");
-        System.out.println("==========================================");
+        System.out.println(
+                "Press Ctrl+C to stop the server."
+        );
+        System.out.println(
+                "=========================================="
+        );
     }
 
 
-    // ==========================================
-    // HOME
-    // ==========================================
-
-    private static void home(HttpExchange exchange)
-            throws IOException {
-
-        serveFile(exchange, "index.html");
-    }
-
-
-    // ==========================================
+    // ==================================================
     // LOGIN
-    // ==========================================
+    // ==================================================
 
-    private static void login(HttpExchange exchange)
+    private static void login(
+            HttpExchange exchange)
             throws IOException {
 
-        if (!exchange.getRequestMethod().equalsIgnoreCase("POST")) {
+        if (!"POST".equalsIgnoreCase(
+                exchange.getRequestMethod())) {
 
             redirect(exchange, "/");
             return;
         }
 
-        String body = readBody(exchange);
 
         Map<String, String> data =
-                parseForm(body);
+                parseForm(readBody(exchange));
+
 
         String username =
-                data.getOrDefault("username", "");
+                data.getOrDefault(
+                        "username",
+                        ""
+                );
 
         String password =
-                data.getOrDefault("password", "");
+                data.getOrDefault(
+                        "password",
+                        ""
+                );
 
-        if (username.equals("admin")
-                && password.equals("admin123")) {
 
-            redirect(exchange, "/dashboard.html");
+        if (
+                username.equals("admin")
+                        &&
+                password.equals("admin123")
+        ) {
+
+            redirect(
+                    exchange,
+                    "/dashboard.html"
+            );
 
         } else {
 
-            String html = """
-                    <!DOCTYPE html>
-                    <html>
-                    <head>
-                        <title>Login Failed</title>
-                        <link rel="stylesheet"
-                              href="/css/style.css">
-                    </head>
-
-                    <body>
-
-                    <div class="message-page">
-
-                        <div class="message-card">
-
-                            <div class="message-icon">
-                                !
-                            </div>
-
-                            <h1>Login Failed</h1>
-
-                            <p>
-                                Invalid username or password.
-                            </p>
-
-                            <a href="/">
-                                Try Again
-                            </a>
-
-                        </div>
-
-                    </div>
-
-                    </body>
-                    </html>
-                    """;
-
-            sendHtml(exchange, html);
+            sendHtml(
+                    exchange,
+                    messagePage(
+                            "Login Failed",
+                            "Invalid username or password.",
+                            "/",
+                            "Try Again"
+                    )
+            );
         }
     }
 
 
-    // ==========================================
-    // DASHBOARD PAGE
-    // ==========================================
-
-    private static void dashboard(HttpExchange exchange)
-            throws IOException {
-
-        serveFile(exchange, "dashboard.html");
-    }
-
-
-    // ==========================================
-    // ROOMS PAGE
-    // ==========================================
-
-    private static void rooms(HttpExchange exchange)
-            throws IOException {
-
-        serveFile(exchange, "rooms.html");
-    }
-
-
-    // ==========================================
-    // BOOKING PAGE
-    // ==========================================
-
-    private static void booking(HttpExchange exchange)
-            throws IOException {
-
-        serveFile(exchange, "booking.html");
-    }
-
-
-    // ==========================================
-    // BOOKING HISTORY PAGE
-    // ==========================================
-
-    private static void bookings(HttpExchange exchange)
-            throws IOException {
-
-        serveFile(exchange, "bookings.html");
-    }
-
-
-    // ==========================================
-    // CSS
-    // ==========================================
-
-    private static void css(HttpExchange exchange)
-            throws IOException {
-
-        serveFile(exchange, "css/style.css");
-    }
-
-
-    // ==========================================
+    // ==================================================
     // DASHBOARD DATA
-    // ==========================================
+    // ==================================================
 
     private static void dashboardData(
             HttpExchange exchange)
             throws IOException {
 
-        if (!exchange.getRequestMethod()
-                .equalsIgnoreCase("GET")) {
+        if (!"GET".equalsIgnoreCase(
+                exchange.getRequestMethod())) {
 
-            sendJson(exchange,
-                    "{\"error\":\"Invalid request\"}");
+            sendJson(
+                    exchange,
+                    "{\"error\":\"Invalid request\"}"
+            );
 
             return;
         }
 
-        try (Connection con =
-                     DatabaseConnection.getConnection()) {
 
-            int totalRooms = 0;
-            int availableRooms = 0;
-            int bookedRooms = 0;
-            int totalBookings = 0;
-
-            double revenue = 0;
+        try (
+                Connection con =
+                        DatabaseConnection.getConnection()
+        ) {
 
 
-            // ROOM STATISTICS
-            String roomQuery = """
-                    SELECT
-                        COUNT(*) AS total,
-                        SUM(
-                            CASE
-                                WHEN available = TRUE
-                                THEN 1 ELSE 0
-                            END
-                        ) AS available,
-                        SUM(
-                            CASE
-                                WHEN available = FALSE
-                                THEN 1 ELSE 0
-                            END
-                        ) AS booked
-                    FROM rooms
-                    """;
-
-            try (PreparedStatement ps =
-                         con.prepareStatement(roomQuery);
-
-                 ResultSet rs = ps.executeQuery()) {
-
-                if (rs.next()) {
-
-                    totalRooms = rs.getInt("total");
-                    availableRooms =
-                            rs.getInt("available");
-                    bookedRooms =
-                            rs.getInt("booked");
-                }
-            }
+            int totalRooms =
+                    scalarInt(
+                            con,
+                            "SELECT COUNT(*) FROM rooms"
+                    );
 
 
-            // BOOKING STATISTICS
-            String bookingQuery = """
-                    SELECT
-                        COUNT(*) AS total,
-                        COALESCE(SUM(total), 0) AS revenue
-                    FROM bookings
-                    """;
+            int availableRooms =
+                    scalarInt(
+                            con,
+                            "SELECT COUNT(*) " +
+                            "FROM rooms " +
+                            "WHERE available=TRUE"
+                    );
 
-            try (PreparedStatement ps =
-                         con.prepareStatement(bookingQuery);
 
-                 ResultSet rs = ps.executeQuery()) {
+            int bookedRooms =
+                    totalRooms -
+                    availableRooms;
 
-                if (rs.next()) {
 
-                    totalBookings =
-                            rs.getInt("total");
+            int totalBookings =
+                    scalarInt(
+                            con,
+                            "SELECT COUNT(*) " +
+                            "FROM bookings"
+                    );
 
-                    revenue =
-                            rs.getDouble("revenue");
-                }
-            }
+
+            double roomRevenue =
+                    scalarDouble(
+                            con,
+                            "SELECT COALESCE(" +
+                            "SUM(total),0) " +
+                            "FROM bookings " +
+                            "WHERE status <> " +
+                            "'CANCELLED'"
+                    );
+
+
+            double serviceRevenue =
+                    scalarDouble(
+                            con,
+                            "SELECT COALESCE(" +
+                            "SUM(rs.total),0) " +
+                            "FROM room_services rs " +
+                            "JOIN bookings b " +
+                            "ON rs.booking_id=" +
+                            "b.booking_id " +
+                            "WHERE b.status <> " +
+                            "'CANCELLED'"
+                    );
+
+
+            double revenue =
+                    roomRevenue +
+                    serviceRevenue;
 
 
             StringBuilder json =
                     new StringBuilder();
 
+
             json.append("{");
 
-            json.append("\"totalRooms\":")
-                    .append(totalRooms)
-                    .append(",");
+            json.append(
+                    "\"totalRooms\":"
+            ).append(totalRooms).append(",");
 
-            json.append("\"availableRooms\":")
-                    .append(availableRooms)
-                    .append(",");
+            json.append(
+                    "\"availableRooms\":"
+            ).append(availableRooms).append(",");
 
-            json.append("\"bookedRooms\":")
-                    .append(bookedRooms)
-                    .append(",");
+            json.append(
+                    "\"bookedRooms\":"
+            ).append(bookedRooms).append(",");
 
-            json.append("\"totalBookings\":")
-                    .append(totalBookings)
-                    .append(",");
+            json.append(
+                    "\"totalBookings\":"
+            ).append(totalBookings).append(",");
 
-            json.append("\"revenue\":")
-                    .append(revenue)
-                    .append(",");
+            json.append(
+                    "\"revenue\":"
+            ).append(revenue).append(",");
 
 
-            // ALL ROOMS
+            // ROOMS
+
             json.append("\"rooms\":[");
 
-            String roomsQuery = """
-                    SELECT
-                        room_number,
-                        floor_number,
-                        room_type,
-                        price,
-                        available
-                    FROM rooms
-                    ORDER BY room_number
-                    """;
 
-            try (PreparedStatement ps =
-                         con.prepareStatement(roomsQuery);
+            String roomQuery =
+                    "SELECT room_number," +
+                    "floor_number," +
+                    "room_type," +
+                    "price," +
+                    "available " +
+                    "FROM rooms " +
+                    "ORDER BY room_number";
 
-                 ResultSet rs = ps.executeQuery()) {
+
+            try (
+                    PreparedStatement ps =
+                            con.prepareStatement(
+                                    roomQuery
+                            );
+
+                    ResultSet rs =
+                            ps.executeQuery()
+            ) {
 
                 boolean first = true;
 
+
                 while (rs.next()) {
 
-                    if (!first)
+                    if (!first) {
                         json.append(",");
+                    }
 
                     first = false;
 
-                    json.append("{");
 
-                    json.append("\"roomNumber\":")
-                            .append(rs.getInt("room_number"))
-                            .append(",");
+                    json.append(
+                            String.format(
+                                    Locale.US,
 
-                    json.append("\"floor\":")
-                            .append(rs.getInt("floor_number"))
-                            .append(",");
+                                    "{\"roomNumber\":%d," +
+                                    "\"floor\":%d," +
+                                    "\"roomType\":\"%s\"," +
+                                    "\"price\":%.2f," +
+                                    "\"available\":%s}",
 
-                    json.append("\"type\":\"")
-                            .append(jsonEscape(
-                                    rs.getString("room_type")))
-                            .append("\",");
+                                    rs.getInt(
+                                            "room_number"
+                                    ),
 
-                    json.append("\"price\":")
-                            .append(rs.getDouble("price"))
-                            .append(",");
+                                    rs.getInt(
+                                            "floor_number"
+                                    ),
 
-                    json.append("\"available\":")
-                            .append(rs.getBoolean("available"));
+                                    jsonEscape(
+                                            rs.getString(
+                                                    "room_type"
+                                            )
+                                    ),
 
-                    json.append("}");
+                                    rs.getDouble(
+                                            "price"
+                                    ),
+
+                                    rs.getBoolean(
+                                            "available"
+                                    )
+                            )
+                    );
                 }
             }
+
 
             json.append("],");
 
 
             // RECENT BOOKINGS
-            json.append("\"recentBookings\":[");
 
-            String recentQuery = """
-                    SELECT
-                        b.booking_id,
-                        c.name,
-                        b.room_number,
-                        r.room_type,
-                        b.days,
-                        b.total,
-                        b.status,
-                        b.booking_date,
-                        b.checkout_date,
-                        COALESCE((
-                            SELECT SUM(rs.total)
-                            FROM room_services rs
-                            WHERE rs.booking_id = b.booking_id
-                        ), 0) AS service_total
-                    FROM bookings b
-                    JOIN customers c
-                        ON b.customer_id = c.customer_id
-                    JOIN rooms r
-                        ON b.room_number = r.room_number
-                    ORDER BY b.booking_id DESC
-                    LIMIT 5
-                    """;
+            json.append(
+                    "\"recentBookings\":["
+            );
 
-            try (PreparedStatement ps =
-                         con.prepareStatement(recentQuery);
 
-                 ResultSet rs = ps.executeQuery()) {
+            String recentQuery =
+                    "SELECT " +
+                    "b.booking_id," +
+                    "c.name," +
+                    "b.room_number," +
+                    "r.room_type," +
+                    "b.days," +
+                    "b.total," +
+                    "b.status," +
+                    "b.booking_date," +
+
+                    "COALESCE((" +
+                    "SELECT SUM(rs.total) " +
+                    "FROM room_services rs " +
+                    "WHERE rs.booking_id=" +
+                    "b.booking_id" +
+                    "),0) AS service_total " +
+
+                    "FROM bookings b " +
+
+                    "JOIN customers c " +
+                    "ON b.customer_id=" +
+                    "c.customer_id " +
+
+                    "JOIN rooms r " +
+                    "ON b.room_number=" +
+                    "r.room_number " +
+
+                    "ORDER BY b.booking_id DESC " +
+                    "LIMIT 5";
+
+
+            try (
+                    PreparedStatement ps =
+                            con.prepareStatement(
+                                    recentQuery
+                            );
+
+                    ResultSet rs =
+                            ps.executeQuery()
+            ) {
 
                 boolean first = true;
 
+
                 while (rs.next()) {
 
-                    if (!first)
+                    if (!first) {
                         json.append(",");
+                    }
 
                     first = false;
 
-                    json.append("{");
 
-                    json.append("\"bookingId\":")
-                            .append(rs.getInt("booking_id"))
-                            .append(",");
+                    json.append(
+                            String.format(
+                                    Locale.US,
 
-                    json.append("\"name\":\"")
-                            .append(jsonEscape(
-                                    rs.getString("name")))
-                            .append("\",");
+                                    "{\"bookingId\":%d," +
+                                    "\"name\":\"%s\"," +
+                                    "\"room\":%d," +
+                                    "\"roomType\":\"%s\"," +
+                                    "\"days\":%d," +
+                                    "\"total\":%.2f," +
+                                    "\"serviceTotal\":%.2f," +
+                                    "\"status\":\"%s\"," +
+                                    "\"date\":\"%s\"}",
 
-                    json.append("\"room\":")
-                            .append(rs.getInt("room_number"))
-                            .append(",");
+                                    rs.getInt(
+                                            "booking_id"
+                                    ),
 
-                    json.append("\"type\":\"")
-                            .append(jsonEscape(
-                                    rs.getString("room_type")))
-                            .append("\",");
+                                    jsonEscape(
+                                            rs.getString(
+                                                    "name"
+                                            )
+                                    ),
 
-                    json.append("\"days\":")
-                            .append(rs.getInt("days"))
-                            .append(",");
+                                    rs.getInt(
+                                            "room_number"
+                                    ),
 
-                    json.append("\"total\":")
-                            .append(rs.getDouble("total"))
-                            .append(",");
+                                    jsonEscape(
+                                            rs.getString(
+                                                    "room_type"
+                                            )
+                                    ),
 
-                    json.append("\"date\":\"")
-                            .append(jsonEscape(
-                                    rs.getString(
-                                            "booking_date")))
-                            .append("\"");
+                                    rs.getInt("days"),
 
-                    json.append("}");
+                                    rs.getDouble("total"),
+
+                                    rs.getDouble(
+                                            "service_total"
+                                    ),
+
+                                    jsonEscape(
+                                            rs.getString(
+                                                    "status"
+                                            )
+                                    ),
+
+                                    jsonEscape(
+                                            formatDate(
+                                                    rs.getTimestamp(
+                                                            "booking_date"
+                                                    )
+                                            )
+                                    )
+                            )
+                    );
                 }
             }
+
 
             json.append("]");
 
             json.append("}");
 
-            sendJson(exchange, json.toString());
-
-        } catch (Exception e) {
-
-            e.printStackTrace();
 
             sendJson(
                     exchange,
-                    "{\"error\":\"Database error\"}"
+                    json.toString()
+            );
+
+
+        } catch (Exception e) {
+
+            sendJson(
+                    exchange,
+                    "{\"error\":\"" +
+                    jsonEscape(
+                            e.getMessage()
+                    ) +
+                    "\"}"
             );
         }
     }
 
 
-    // ==========================================
+    // ==================================================
     // ALL ROOMS
-    // ==========================================
+    // ==================================================
 
-    private static void allRooms(HttpExchange exchange)
+    private static void allRooms(
+            HttpExchange exchange)
             throws IOException {
 
-        try (Connection con =
-                     DatabaseConnection.getConnection()) {
-
-            String query = """
-                    SELECT
-                        room_number,
-                        floor_number,
-                        room_type,
-                        price,
-                        available
-                    FROM rooms
-                    ORDER BY room_number
-                    """;
-
-            StringBuilder json =
-                    new StringBuilder("[");
-
-            try (PreparedStatement ps =
-                         con.prepareStatement(query);
-
-                 ResultSet rs =
-                         ps.executeQuery()) {
-
-                boolean first = true;
-
-                while (rs.next()) {
-
-                    if (!first)
-                        json.append(",");
-
-                    first = false;
-
-                    json.append("{");
-
-                    json.append("\"roomNumber\":")
-                            .append(rs.getInt("room_number"))
-                            .append(",");
-
-                    json.append("\"floor\":")
-                            .append(rs.getInt("floor_number"))
-                            .append(",");
-
-                    json.append("\"type\":\"")
-                            .append(jsonEscape(
-                                    rs.getString("room_type")))
-                            .append("\",");
-
-                    json.append("\"price\":")
-                            .append(rs.getDouble("price"))
-                            .append(",");
-
-                    json.append("\"available\":")
-                            .append(rs.getBoolean("available"));
-
-                    json.append("}");
-                }
-            }
-
-            json.append("]");
-
-            sendJson(exchange, json.toString());
-
-        } catch (Exception e) {
-
-            e.printStackTrace();
-
-            sendJson(
-                    exchange,
-                    "{\"error\":\"Database error\"}"
-            );
-        }
+        roomList(
+                exchange,
+                false
+        );
     }
 
 
-    // ==========================================
+    // ==================================================
     // AVAILABLE ROOMS
-    // ==========================================
+    // ==================================================
 
     private static void availableRooms(
             HttpExchange exchange)
             throws IOException {
 
-        try (Connection con =
-                     DatabaseConnection.getConnection()) {
+        roomList(
+                exchange,
+                true
+        );
+    }
 
-            String query = """
-                    SELECT
-                        room_number,
-                        floor_number,
-                        room_type,
-                        price
-                    FROM rooms
-                    WHERE available = TRUE
-                    ORDER BY room_number
-                    """;
+
+    private static void roomList(
+            HttpExchange exchange,
+            boolean onlyAvailable)
+            throws IOException {
+
+
+        String query =
+                "SELECT room_number," +
+                "floor_number," +
+                "room_type," +
+                "price," +
+                "available " +
+                "FROM rooms ";
+
+
+        if (onlyAvailable) {
+
+            query +=
+                    "WHERE available=TRUE ";
+        }
+
+
+        query +=
+                "ORDER BY floor_number," +
+                "room_number";
+
+
+        try (
+                Connection con =
+                        DatabaseConnection.getConnection();
+
+                PreparedStatement ps =
+                        con.prepareStatement(query);
+
+                ResultSet rs =
+                        ps.executeQuery()
+        ) {
+
 
             StringBuilder json =
                     new StringBuilder("[");
 
-            try (PreparedStatement ps =
-                         con.prepareStatement(query);
+            boolean first = true;
 
-                 ResultSet rs =
-                         ps.executeQuery()) {
 
-                boolean first = true;
+            while (rs.next()) {
 
-                while (rs.next()) {
-
-                    if (!first)
-                        json.append(",");
-
-                    first = false;
-
-                    json.append("{");
-
-                    json.append("\"roomNumber\":")
-                            .append(rs.getInt("room_number"))
-                            .append(",");
-
-                    json.append("\"floor\":")
-                            .append(rs.getInt("floor_number"))
-                            .append(",");
-
-                    json.append("\"type\":\"")
-                            .append(jsonEscape(
-                                    rs.getString("room_type")))
-                            .append("\",");
-
-                    json.append("\"price\":")
-                            .append(rs.getDouble("price"));
-
-                    json.append("}");
+                if (!first) {
+                    json.append(",");
                 }
+
+                first = false;
+
+
+                json.append(
+                        String.format(
+                                Locale.US,
+
+                                "{\"roomNumber\":%d," +
+                                "\"floor\":%d," +
+                                "\"roomType\":\"%s\"," +
+                                "\"price\":%.2f," +
+                                "\"available\":%s}",
+
+                                rs.getInt(
+                                        "room_number"
+                                ),
+
+                                rs.getInt(
+                                        "floor_number"
+                                ),
+
+                                jsonEscape(
+                                        rs.getString(
+                                                "room_type"
+                                        )
+                                ),
+
+                                rs.getDouble(
+                                        "price"
+                                ),
+
+                                rs.getBoolean(
+                                        "available"
+                                )
+                        )
+                );
             }
+
 
             json.append("]");
 
-            sendJson(exchange, json.toString());
-
-        } catch (Exception e) {
-
-            e.printStackTrace();
 
             sendJson(
                     exchange,
-                    "{\"error\":\"Database error\"}"
+                    json.toString()
+            );
+
+
+        } catch (Exception e) {
+
+            sendJson(
+                    exchange,
+                    "{\"error\":\"" +
+                    jsonEscape(
+                            e.getMessage()
+                    ) +
+                    "\"}"
             );
         }
     }
 
 
-    // ==========================================
+    // ==================================================
     // BOOKING HISTORY
-    // ==========================================
+    // ==================================================
 
     private static void bookingHistory(
             HttpExchange exchange)
             throws IOException {
 
-        try (Connection con =
-                     DatabaseConnection.getConnection()) {
 
-            String query = """
-                    SELECT
-                        b.booking_id,
-                        c.name,
-                        c.phone,
-                        b.room_number,
-                        r.room_type,
-                        b.days,
-                        b.total,
-                        b.status,
-                        b.booking_date,
-                        b.checkout_date,
-                        COALESCE((
-                            SELECT SUM(rs.total)
-                            FROM room_services rs
-                            WHERE rs.booking_id = b.booking_id
-                        ), 0) AS service_total
-                    FROM bookings b
-                    JOIN customers c
-                        ON b.customer_id = c.customer_id
-                    JOIN rooms r
-                        ON b.room_number = r.room_number
-                    ORDER BY b.booking_id DESC
-                    """;
+        String query =
+                "SELECT " +
+
+                "b.booking_id," +
+                "c.name," +
+                "c.phone," +
+                "b.room_number," +
+                "r.room_type," +
+                "b.days," +
+                "b.total," +
+                "b.status," +
+                "b.booking_date," +
+                "b.checkout_date," +
+
+                "COALESCE((" +
+                "SELECT SUM(rs.total) " +
+                "FROM room_services rs " +
+                "WHERE rs.booking_id=" +
+                "b.booking_id" +
+                "),0) AS service_total " +
+
+                "FROM bookings b " +
+
+                "JOIN customers c " +
+                "ON b.customer_id=" +
+                "c.customer_id " +
+
+                "JOIN rooms r " +
+                "ON b.room_number=" +
+                "r.room_number " +
+
+                "ORDER BY b.booking_id DESC";
+
+
+        try (
+                Connection con =
+                        DatabaseConnection.getConnection();
+
+                PreparedStatement ps =
+                        con.prepareStatement(query);
+
+                ResultSet rs =
+                        ps.executeQuery()
+        ) {
+
 
             StringBuilder json =
                     new StringBuilder("[");
 
-            try (PreparedStatement ps =
-                         con.prepareStatement(query);
+            boolean first = true;
 
-                 ResultSet rs =
-                         ps.executeQuery()) {
 
-                boolean first = true;
+            while (rs.next()) {
 
-                while (rs.next()) {
-
-                    if (!first)
-                        json.append(",");
-
-                    first = false;
-
-                    json.append("{");
-
-                    json.append("\"id\":")
-                            .append(rs.getInt("booking_id"))
-                            .append(",");
-
-                    json.append("\"name\":\"")
-                            .append(jsonEscape(
-                                    rs.getString("name")))
-                            .append("\",");
-
-                    json.append("\"phone\":\"")
-                            .append(jsonEscape(
-                                    rs.getString("phone")))
-                            .append("\",");
-
-                    json.append("\"room\":")
-                            .append(rs.getInt("room_number"))
-                            .append(",");
-
-                    json.append("\"type\":\"")
-                            .append(jsonEscape(
-                                    rs.getString("room_type")))
-                            .append("\",");
-
-                    json.append("\"days\":")
-                            .append(rs.getInt("days"))
-                            .append(",");
-
-                    json.append("\"total\":")
-                            .append(rs.getDouble("total"))
-                            .append(",");
-
-                    json.append("\"serviceTotal\":")
-                            .append(rs.getDouble("service_total"))
-                            .append(",");
-
-                    json.append("\"status\":\"")
-                            .append(jsonEscape(rs.getString("status")))
-                            .append("\",");
-
-                    json.append("\"date\":\"")
-                            .append(jsonEscape(
-                                    rs.getString(
-                                            "booking_date")))
-                            .append("\",");
-
-                    String checkoutDate = rs.getString("checkout_date");
-                    json.append("\"checkoutDate\":");
-                    if (checkoutDate == null) {
-                        json.append("null");
-                    } else {
-                        json.append("\"")
-                                .append(jsonEscape(checkoutDate))
-                                .append("\"");
-                    }
-
-                    json.append("}");
+                if (!first) {
+                    json.append(",");
                 }
+
+                first = false;
+
+
+                String bookingDate =
+                        formatDate(
+                                rs.getTimestamp(
+                                        "booking_date"
+                                )
+                        );
+
+
+                String checkoutDate = "";
+
+
+                if (
+                        rs.getTimestamp(
+                                "checkout_date"
+                        ) != null
+                ) {
+
+                    checkoutDate =
+                            formatDate(
+                                    rs.getTimestamp(
+                                            "checkout_date"
+                                    )
+                            );
+                }
+
+
+                json.append(
+                        String.format(
+                                Locale.US,
+
+                                "{\"bookingId\":%d," +
+                                "\"name\":\"%s\"," +
+                                "\"phone\":\"%s\"," +
+                                "\"roomNumber\":%d," +
+                                "\"roomType\":\"%s\"," +
+                                "\"days\":%d," +
+                                "\"total\":%.2f," +
+                                "\"status\":\"%s\"," +
+                                "\"bookingDate\":\"%s\"," +
+                                "\"checkoutDate\":\"%s\"," +
+                                "\"serviceTotal\":%.2f}",
+
+                                rs.getInt(
+                                        "booking_id"
+                                ),
+
+                                jsonEscape(
+                                        rs.getString(
+                                                "name"
+                                        )
+                                ),
+
+                                jsonEscape(
+                                        rs.getString(
+                                                "phone"
+                                        )
+                                ),
+
+                                rs.getInt(
+                                        "room_number"
+                                ),
+
+                                jsonEscape(
+                                        rs.getString(
+                                                "room_type"
+                                        )
+                                ),
+
+                                rs.getInt("days"),
+
+                                rs.getDouble("total"),
+
+                                jsonEscape(
+                                        rs.getString(
+                                                "status"
+                                        )
+                                ),
+
+                                jsonEscape(
+                                        bookingDate
+                                ),
+
+                                jsonEscape(
+                                        checkoutDate
+                                ),
+
+                                rs.getDouble(
+                                        "service_total"
+                                )
+                        )
+                );
             }
+
 
             json.append("]");
 
-            sendJson(exchange, json.toString());
-
-        } catch (Exception e) {
-
-            e.printStackTrace();
 
             sendJson(
                     exchange,
-                    "{\"error\":\"Database error\"}"
+                    json.toString()
+            );
+
+
+        } catch (Exception e) {
+
+            sendJson(
+                    exchange,
+                    "{\"error\":\"" +
+                    jsonEscape(
+                            e.getMessage()
+                    ) +
+                    "\"}"
             );
         }
     }
 
 
-    // ==========================================
+    // ==================================================
     // CREATE BOOKING
-    // ==========================================
+    // ==================================================
 
-    private static void book(HttpExchange exchange)
+    private static void book(
+            HttpExchange exchange)
             throws IOException {
 
-        if (!exchange.getRequestMethod()
-                .equalsIgnoreCase("POST")) {
 
-            redirect(exchange, "/booking.html");
+        if (!"POST".equalsIgnoreCase(
+                exchange.getRequestMethod())) {
+
+            redirect(
+                    exchange,
+                    "/booking.html"
+            );
+
             return;
         }
 
-        String body =
-                readBody(exchange);
 
         Map<String, String> data =
-                parseForm(body);
+                parseForm(
+                        readBody(exchange)
+                );
+
 
         String name =
-                data.getOrDefault("name", "").trim();
+                data.getOrDefault(
+                        "name",
+                        ""
+                ).trim();
+
 
         String phone =
-                data.getOrDefault("phone", "").trim();
+                data.getOrDefault(
+                        "phone",
+                        ""
+                ).trim();
 
-        int roomNumber;
 
-        int days;
+        int room =
+                intValue(
+                        data.getOrDefault(
+                                "roomNumber",
+                                data.getOrDefault(
+                                        "room",
+                                        "0"
+                                )
+                        ),
+                        0
+                );
 
-        try {
 
-            roomNumber =
-                    Integer.parseInt(
-                            data.getOrDefault(
-                                    "room",
-                                    "0"));
+        int days =
+                Math.max(
+                        1,
+                        intValue(
+                                data.get("days"),
+                                1
+                        )
+                );
 
-            days =
-                    Integer.parseInt(
-                            data.getOrDefault(
-                                    "days",
-                                    "0"));
 
-        } catch (NumberFormatException e) {
+        if (
+                name.isBlank()
+                        ||
+                phone.isBlank()
+                        ||
+                room <= 0
+        ) {
 
-            sendErrorPage(
+            sendError(
                     exchange,
-                    "Invalid room or number of days."
+                    "Please fill all booking details."
             );
 
             return;
         }
 
-        if (name.isEmpty()
-                || phone.isEmpty()
-                || days <= 0) {
 
-            sendErrorPage(
-                    exchange,
-                    "Please fill all fields correctly."
-            );
+        try (
+                Connection con =
+                        DatabaseConnection.getConnection()
+        ) {
 
-            return;
-        }
-
-
-        Connection con = null;
-
-        try {
-
-            con =
-                    DatabaseConnection.getConnection();
 
             con.setAutoCommit(false);
 
 
-            // CHECK ROOM
-            String roomQuery = """
-                    SELECT
-                        room_type,
-                        price,
-                        available
-                    FROM rooms
-                    WHERE room_number = ?
-                    FOR UPDATE
-                    """;
+            try {
 
-            String roomType;
 
-            double price;
+                double price;
 
-            boolean available;
 
-            try (PreparedStatement ps =
-                         con.prepareStatement(roomQuery)) {
+                try (
+                        PreparedStatement ps =
+                                con.prepareStatement(
+                                        "SELECT price,available " +
+                                        "FROM rooms " +
+                                        "WHERE room_number=? " +
+                                        "FOR UPDATE"
+                                )
+                ) {
 
-                ps.setInt(1, roomNumber);
+                    ps.setInt(1, room);
 
-                try (ResultSet rs =
-                             ps.executeQuery()) {
+
+                    try (
+                            ResultSet rs =
+                                    ps.executeQuery()
+                    ) {
+
+                        if (!rs.next()) {
+
+                            throw new IllegalArgumentException(
+                                    "Room does not exist."
+                            );
+                        }
+
+
+                        if (
+                                !rs.getBoolean(
+                                        "available"
+                                )
+                        ) {
+
+                            throw new IllegalArgumentException(
+                                    "Room is already booked."
+                            );
+                        }
+
+
+                        price =
+                                rs.getDouble(
+                                        "price"
+                                );
+                    }
+                }
+
+
+                int customerId;
+
+
+                try (
+                        PreparedStatement ps =
+                                con.prepareStatement(
+                                        "INSERT INTO customers" +
+                                        "(name,phone)" +
+                                        "VALUES(?,?)",
+                                        Statement.RETURN_GENERATED_KEYS
+                                )
+                ) {
+
+                    ps.setString(
+                            1,
+                            name
+                    );
+
+                    ps.setString(
+                            2,
+                            phone
+                    );
+
+                    ps.executeUpdate();
+
+
+                    try (
+                            ResultSet rs =
+                                    ps.getGeneratedKeys()
+                    ) {
+
+                        rs.next();
+
+                        customerId =
+                                rs.getInt(1);
+                    }
+                }
+
+
+                double total =
+                        price * days;
+
+
+                int bookingId;
+
+
+                try (
+                        PreparedStatement ps =
+                                con.prepareStatement(
+                                        "INSERT INTO bookings" +
+                                        "(customer_id,room_number," +
+                                        "days,total,status)" +
+                                        "VALUES(?,?,?,?, 'ACTIVE')",
+                                        Statement.RETURN_GENERATED_KEYS
+                                )
+                ) {
+
+                    ps.setInt(
+                            1,
+                            customerId
+                    );
+
+                    ps.setInt(
+                            2,
+                            room
+                    );
+
+                    ps.setInt(
+                            3,
+                            days
+                    );
+
+                    ps.setDouble(
+                            4,
+                            total
+                    );
+
+                    ps.executeUpdate();
+
+
+                    try (
+                            ResultSet rs =
+                                    ps.getGeneratedKeys()
+                    ) {
+
+                        rs.next();
+
+                        bookingId =
+                                rs.getInt(1);
+                    }
+                }
+
+
+                try (
+                        PreparedStatement ps =
+                                con.prepareStatement(
+                                        "UPDATE rooms " +
+                                        "SET available=FALSE " +
+                                        "WHERE room_number=?"
+                                )
+                ) {
+
+                    ps.setInt(
+                            1,
+                            room
+                    );
+
+                    ps.executeUpdate();
+                }
+
+
+                con.commit();
+
+
+                redirect(
+                        exchange,
+                        "/bookings.html?success=" +
+                        urlEncode(
+                                "Booking created successfully. "
+                                + "Booking ID: "
+                                + bookingId
+                        )
+                );
+
+
+            } catch (Exception e) {
+
+                con.rollback();
+
+                sendError(
+                        exchange,
+                        e.getMessage()
+                );
+            }
+
+
+        } catch (Exception e) {
+
+            sendError(
+                    exchange,
+                    e.getMessage()
+            );
+        }
+    }
+
+
+    // ==================================================
+    // CANCEL BOOKING
+    // ==================================================
+
+    private static void cancelBooking(
+            HttpExchange exchange)
+            throws IOException {
+
+
+        if (!"POST".equalsIgnoreCase(
+                exchange.getRequestMethod())) {
+
+            sendError(
+                    exchange,
+                    "Invalid request."
+            );
+
+            return;
+        }
+
+
+        Map<String, String> data =
+                parseForm(
+                        readBody(exchange)
+                );
+
+
+        int bookingId =
+                intValue(
+                        data.get("bookingId"),
+                        0
+                );
+
+
+        try (
+                Connection con =
+                        DatabaseConnection.getConnection()
+        ) {
+
+
+            con.setAutoCommit(false);
+
+
+            try {
+
+
+                int roomNumber;
+
+
+                try (
+                        PreparedStatement ps =
+                                con.prepareStatement(
+                                        "SELECT room_number,status " +
+                                        "FROM bookings " +
+                                        "WHERE booking_id=? " +
+                                        "FOR UPDATE"
+                                )
+                ) {
+
+                    ps.setInt(
+                            1,
+                            bookingId
+                    );
+
+
+                    try (
+                            ResultSet rs =
+                                    ps.executeQuery()
+                    ) {
+
+                        if (!rs.next()) {
+
+                            throw new IllegalArgumentException(
+                                    "Booking not found."
+                            );
+                        }
+
+
+                        if (
+                                !"ACTIVE".equals(
+                                        rs.getString(
+                                                "status"
+                                        )
+                                )
+                        ) {
+
+                            throw new IllegalArgumentException(
+                                    "Only active bookings can be cancelled."
+                            );
+                        }
+
+
+                        roomNumber =
+                                rs.getInt(
+                                        "room_number"
+                                );
+                    }
+                }
+
+
+                try (
+                        PreparedStatement ps =
+                                con.prepareStatement(
+                                        "UPDATE bookings " +
+                                        "SET status='CANCELLED' " +
+                                        "WHERE booking_id=?"
+                                )
+                ) {
+
+                    ps.setInt(
+                            1,
+                            bookingId
+                    );
+
+                    ps.executeUpdate();
+                }
+
+
+                try (
+                        PreparedStatement ps =
+                                con.prepareStatement(
+                                        "UPDATE rooms " +
+                                        "SET available=TRUE " +
+                                        "WHERE room_number=?"
+                                )
+                ) {
+
+                    ps.setInt(
+                            1,
+                            roomNumber
+                    );
+
+                    ps.executeUpdate();
+                }
+
+
+                con.commit();
+
+
+                redirect(
+                        exchange,
+                        "/bookings.html?success=" +
+                        urlEncode(
+                                "Booking cancelled successfully."
+                        )
+                );
+
+
+            } catch (Exception e) {
+
+                con.rollback();
+
+                sendError(
+                        exchange,
+                        e.getMessage()
+                );
+            }
+
+
+        } catch (Exception e) {
+
+            sendError(
+                    exchange,
+                    e.getMessage()
+            );
+        }
+    }
+
+
+    // ==================================================
+    // CHECKOUT
+    // ==================================================
+
+    private static void checkout(
+            HttpExchange exchange)
+            throws IOException {
+
+
+        if (!"POST".equalsIgnoreCase(
+                exchange.getRequestMethod())) {
+
+            sendError(
+                    exchange,
+                    "Invalid request."
+            );
+
+            return;
+        }
+
+
+        Map<String, String> data =
+                parseForm(
+                        readBody(exchange)
+                );
+
+
+        int bookingId =
+                intValue(
+                        data.get("bookingId"),
+                        0
+                );
+
+
+        try (
+                Connection con =
+                        DatabaseConnection.getConnection()
+        ) {
+
+
+            con.setAutoCommit(false);
+
+
+            try {
+
+
+                int roomNumber;
+
+
+                try (
+                        PreparedStatement ps =
+                                con.prepareStatement(
+                                        "SELECT room_number,status " +
+                                        "FROM bookings " +
+                                        "WHERE booking_id=? " +
+                                        "FOR UPDATE"
+                                )
+                ) {
+
+                    ps.setInt(
+                            1,
+                            bookingId
+                    );
+
+
+                    try (
+                            ResultSet rs =
+                                    ps.executeQuery()
+                    ) {
+
+                        if (!rs.next()) {
+
+                            throw new IllegalArgumentException(
+                                    "Booking not found."
+                            );
+                        }
+
+
+                        if (
+                                !"ACTIVE".equals(
+                                        rs.getString(
+                                                "status"
+                                        )
+                                )
+                        ) {
+
+                            throw new IllegalArgumentException(
+                                    "Only active bookings can be checked out."
+                            );
+                        }
+
+
+                        roomNumber =
+                                rs.getInt(
+                                        "room_number"
+                                );
+                    }
+                }
+
+
+                try (
+                        PreparedStatement ps =
+                                con.prepareStatement(
+                                        "UPDATE bookings " +
+                                        "SET status='CHECKED_OUT'," +
+                                        "checkout_date=NOW() " +
+                                        "WHERE booking_id=?"
+                                )
+                ) {
+
+                    ps.setInt(
+                            1,
+                            bookingId
+                    );
+
+                    ps.executeUpdate();
+                }
+
+
+                try (
+                        PreparedStatement ps =
+                                con.prepareStatement(
+                                        "UPDATE rooms " +
+                                        "SET available=TRUE " +
+                                        "WHERE room_number=?"
+                                )
+                ) {
+
+                    ps.setInt(
+                            1,
+                            roomNumber
+                    );
+
+                    ps.executeUpdate();
+                }
+
+
+                con.commit();
+
+
+                redirect(
+                        exchange,
+                        "/invoice?booking_id=" +
+                        bookingId
+                );
+
+
+            } catch (Exception e) {
+
+                con.rollback();
+
+                sendError(
+                        exchange,
+                        e.getMessage()
+                );
+            }
+
+
+        } catch (Exception e) {
+
+            sendError(
+                    exchange,
+                    e.getMessage()
+            );
+        }
+    }
+
+
+    // ==================================================
+    // ROOM SERVICE
+    // ==================================================
+
+    private static void roomService(
+            HttpExchange exchange)
+            throws IOException {
+
+
+        if (!"POST".equalsIgnoreCase(
+                exchange.getRequestMethod())) {
+
+            sendError(
+                    exchange,
+                    "Invalid request."
+            );
+
+            return;
+        }
+
+
+        Map<String, String> data =
+                parseForm(
+                        readBody(exchange)
+                );
+
+
+        int bookingId =
+                intValue(
+                        data.get("bookingId"),
+                        0
+                );
+
+
+        int quantity =
+                Math.max(
+                        1,
+                        intValue(
+                                data.get("quantity"),
+                                1
+                        )
+                );
+
+
+        String serviceName =
+                data.getOrDefault(
+                        "serviceName",
+                        ""
+                ).trim();
+
+
+        if (
+                bookingId <= 0
+                        ||
+                !SERVICES.containsKey(
+                        serviceName
+                )
+        ) {
+
+            sendError(
+                    exchange,
+                    "Invalid service."
+            );
+
+            return;
+        }
+
+
+        try (
+                Connection con =
+                        DatabaseConnection.getConnection()
+        ) {
+
+
+            String status;
+
+
+            try (
+                    PreparedStatement ps =
+                            con.prepareStatement(
+                                    "SELECT status " +
+                                    "FROM bookings " +
+                                    "WHERE booking_id=?"
+                            )
+            ) {
+
+                ps.setInt(
+                        1,
+                        bookingId
+                );
+
+
+                try (
+                        ResultSet rs =
+                                ps.executeQuery()
+                ) {
 
                     if (!rs.next()) {
 
-                        con.rollback();
-
-                        sendErrorPage(
+                        sendError(
                                 exchange,
-                                "Room does not exist."
+                                "Booking not found."
                         );
 
                         return;
                     }
 
-                    roomType =
-                            rs.getString("room_type");
 
-                    price =
-                            rs.getDouble("price");
-
-                    available =
-                            rs.getBoolean("available");
+                    status =
+                            rs.getString(
+                                    "status"
+                            );
                 }
             }
 
 
-            if (!available) {
+            if (
+                    !"ACTIVE".equals(status)
+            ) {
 
-                con.rollback();
-
-                sendErrorPage(
+                sendError(
                         exchange,
-                        "This room is already booked."
+                        "Services can only be added to active bookings."
                 );
 
                 return;
             }
 
 
+            double price =
+                    SERVICES.get(
+                            serviceName
+                    );
+
+
             double total =
-                    price * days;
+                    price * quantity;
 
 
-            // INSERT CUSTOMER
-            int customerId;
+            try (
+                    PreparedStatement ps =
+                            con.prepareStatement(
+                                    "INSERT INTO room_services" +
+                                    "(booking_id,service_name," +
+                                    "quantity,price,total)" +
+                                    "VALUES(?,?,?,?,?)"
+                            )
+            ) {
 
-            String customerQuery = """
-                    INSERT INTO customers
-                    (name, phone)
-                    VALUES (?, ?)
-                    """;
+                ps.setInt(
+                        1,
+                        bookingId
+                );
 
-            try (PreparedStatement ps =
-                         con.prepareStatement(
-                                 customerQuery,
-                                 Statement.RETURN_GENERATED_KEYS)) {
+                ps.setString(
+                        2,
+                        serviceName
+                );
 
-                ps.setString(1, name);
-                ps.setString(2, phone);
+                ps.setInt(
+                        3,
+                        quantity
+                );
+
+                ps.setDouble(
+                        4,
+                        price
+                );
+
+                ps.setDouble(
+                        5,
+                        total
+                );
 
                 ps.executeUpdate();
+            }
 
-                try (ResultSet keys =
-                             ps.getGeneratedKeys()) {
 
-                    if (!keys.next()) {
+            redirect(
+                    exchange,
+                    "/bookings.html?success=" +
+                    urlEncode(
+                            "Service added successfully."
+                    )
+            );
 
-                        con.rollback();
 
-                        sendErrorPage(
+        } catch (Exception e) {
+
+            sendError(
+                    exchange,
+                    e.getMessage()
+            );
+        }
+    }
+
+
+    // ==================================================
+    // SERVICE LIST
+    // ==================================================
+
+    private static void serviceList(
+            HttpExchange exchange)
+            throws IOException {
+
+
+        Map<String, String> query =
+                parseForm(
+                        exchange.getRequestURI()
+                                .getRawQuery()
+                );
+
+
+        int bookingId =
+                intValue(
+                        query.get("booking_id"),
+                        0
+                );
+
+
+        try (
+                Connection con =
+                        DatabaseConnection.getConnection();
+
+                PreparedStatement ps =
+                        con.prepareStatement(
+                                "SELECT service_name," +
+                                "quantity,price,total," +
+                                "service_date " +
+                                "FROM room_services " +
+                                "WHERE booking_id=? " +
+                                "ORDER BY service_id DESC"
+                        )
+        ) {
+
+
+            ps.setInt(
+                    1,
+                    bookingId
+            );
+
+
+            try (
+                    ResultSet rs =
+                            ps.executeQuery()
+            ) {
+
+
+                StringBuilder json =
+                        new StringBuilder("[");
+
+                boolean first = true;
+
+
+                while (rs.next()) {
+
+                    if (!first) {
+                        json.append(",");
+                    }
+
+                    first = false;
+
+
+                    json.append(
+                            String.format(
+                                    Locale.US,
+
+                                    "{\"name\":\"%s\"," +
+                                    "\"quantity\":%d," +
+                                    "\"price\":%.2f," +
+                                    "\"total\":%.2f," +
+                                    "\"date\":\"%s\"}",
+
+                                    jsonEscape(
+                                            rs.getString(
+                                                    "service_name"
+                                            )
+                                    ),
+
+                                    rs.getInt(
+                                            "quantity"
+                                    ),
+
+                                    rs.getDouble(
+                                            "price"
+                                    ),
+
+                                    rs.getDouble(
+                                            "total"
+                                    ),
+
+                                    jsonEscape(
+                                            formatDate(
+                                                    rs.getTimestamp(
+                                                            "service_date"
+                                                    )
+                                            )
+                                    )
+                            )
+                    );
+                }
+
+
+                json.append("]");
+
+
+                sendJson(
+                        exchange,
+                        json.toString()
+                );
+            }
+
+
+        } catch (Exception e) {
+
+            sendJson(
+                    exchange,
+                    "{\"error\":\"" +
+                    jsonEscape(
+                            e.getMessage()
+                    ) +
+                    "\"}"
+            );
+        }
+    }
+
+
+    // ==================================================
+    // INVOICE
+    // ==================================================
+
+    private static void invoice(
+            HttpExchange exchange)
+            throws IOException {
+
+
+        Map<String, String> query =
+                parseForm(
+                        exchange.getRequestURI()
+                                .getRawQuery()
+                );
+
+
+        int bookingId =
+                intValue(
+                        query.get("booking_id"),
+                        0
+                );
+
+
+        try (
+                Connection con =
+                        DatabaseConnection.getConnection()
+        ) {
+
+
+            String name = "";
+            String phone = "";
+            String roomType = "";
+            String status = "";
+            String bookingDate = "";
+            String checkoutDate = "";
+
+            int room = 0;
+            int days = 0;
+
+            double roomTotal = 0;
+            double serviceTotal = 0;
+
+
+            String q =
+                    "SELECT " +
+                    "c.name,c.phone," +
+                    "b.room_number," +
+                    "r.room_type," +
+                    "b.days," +
+                    "b.total," +
+                    "b.status," +
+                    "b.booking_date," +
+                    "b.checkout_date," +
+
+                    "COALESCE((" +
+                    "SELECT SUM(rs.total) " +
+                    "FROM room_services rs " +
+                    "WHERE rs.booking_id=" +
+                    "b.booking_id" +
+                    "),0) " +
+
+                    "FROM bookings b " +
+
+                    "JOIN customers c " +
+                    "ON b.customer_id=c.customer_id " +
+
+                    "JOIN rooms r " +
+                    "ON b.room_number=r.room_number " +
+
+                    "WHERE b.booking_id=?";
+
+
+            try (
+                    PreparedStatement ps =
+                            con.prepareStatement(q)
+            ) {
+
+                ps.setInt(
+                        1,
+                        bookingId
+                );
+
+
+                try (
+                        ResultSet rs =
+                                ps.executeQuery()
+                ) {
+
+                    if (!rs.next()) {
+
+                        sendError(
                                 exchange,
-                                "Could not create customer."
+                                "Booking not found."
                         );
 
                         return;
                     }
 
-                    customerId =
-                            keys.getInt(1);
+
+                    name =
+                            rs.getString(1);
+
+                    phone =
+                            rs.getString(2);
+
+                    room =
+                            rs.getInt(3);
+
+                    roomType =
+                            rs.getString(4);
+
+                    days =
+                            rs.getInt(5);
+
+                    roomTotal =
+                            rs.getDouble(6);
+
+                    status =
+                            rs.getString(7);
+
+                    bookingDate =
+                            formatDate(
+                                    rs.getTimestamp(8)
+                            );
+
+
+                    if (
+                            rs.getTimestamp(9)
+                                    != null
+                    ) {
+
+                        checkoutDate =
+                                formatDate(
+                                        rs.getTimestamp(9)
+                                );
+                    }
+
+
+                    serviceTotal =
+                            rs.getDouble(10);
                 }
             }
 
-
-            // INSERT BOOKING
-            int bookingId;
-
-            String bookingQuery = """
-                    INSERT INTO bookings
-                    (customer_id, room_number, days, total, status)
-                    VALUES (?, ?, ?, ?, 'ACTIVE')
-                    """;
-
-            try (PreparedStatement ps =
-                         con.prepareStatement(
-                                 bookingQuery,
-                                 Statement.RETURN_GENERATED_KEYS)) {
-
-                ps.setInt(1, customerId);
-                ps.setInt(2, roomNumber);
-                ps.setInt(3, days);
-                ps.setDouble(4, total);
-
-                ps.executeUpdate();
-
-                try (ResultSet keys = ps.getGeneratedKeys()) {
-                    if (!keys.next()) {
-                        con.rollback();
-                        sendErrorPage(
-                                exchange,
-                                "Could not create booking.");
-                        return;
-                    }
-
-                    bookingId = keys.getInt(1);
-                }
-            }
-
-
-            // UPDATE ROOM
-            String updateRoom = """
-                    UPDATE rooms
-                    SET available = FALSE
-                    WHERE room_number = ?
-                    """;
-
-            try (PreparedStatement ps =
-                         con.prepareStatement(updateRoom)) {
-
-                ps.setInt(1, roomNumber);
-
-                ps.executeUpdate();
-            }
-
-
-            con.commit();
-
-
-            // SUCCESS PAGE
-
-            String html = """
-                    <!DOCTYPE html>
-                    <html>
-
-                    <head>
-                        <title>Booking Confirmed</title>
-
-                        <link rel="stylesheet"
-                              href="/css/style.css">
-                    </head>
-
-                    <body>
-
-                    <div class="message-page">
-
-                        <div class="success-card">
-
-                            <div class="success-icon">
-                                ✓
-                            </div>
-
-                            <h1>Booking Confirmed</h1>
-
-                            <p class="success-text">
-                                Your reservation has been
-                                successfully created.
-                            </p>
-
-                            <div class="confirmation-box">
-
-                                <div>
-                                    <span>Booking ID</span>
-                                    <strong>
-                                        #%d
-                                    </strong>
-                                </div>
-
-                                <div>
-                                    <span>Guest</span>
-                                    <strong>
-                                        %s
-                                    </strong>
-                                </div>
-
-                                <div>
-                                    <span>Room</span>
-                                    <strong>
-                                        %d
-                                    </strong>
-                                </div>
-
-                                <div>
-                                    <span>Room Type</span>
-                                    <strong>
-                                        %s
-                                    </strong>
-                                </div>
-
-                                <div>
-                                    <span>Days</span>
-                                    <strong>
-                                        %d
-                                    </strong>
-                                </div>
-
-                                <div>
-                                    <span>Total</span>
-                                    <strong>
-                                        ₹%.2f
-                                    </strong>
-                                </div>
-
-                            </div>
-
-                            <div class="message-buttons">
-
-                                <a href="/dashboard.html">
-                                    Dashboard
-                                </a>
-
-                                <a href="/booking.html">
-                                    New Booking
-                                </a>
-
-                            </div>
-
-                        </div>
-
-                    </div>
-
-                    </body>
-                    </html>
-                    """.formatted(
-                            bookingId,
-                            escapeHtml(name),
-                            roomNumber,
-                            escapeHtml(roomType),
-                            days,
-                            total
-                    );
-
-            sendHtml(exchange, html);
-
-        } catch (Exception e) {
-
-            if (con != null) {
-
-                try {
-                    con.rollback();
-                } catch (Exception ignored) {
-                }
-            }
-
-            e.printStackTrace();
-
-            sendErrorPage(
-                    exchange,
-                    "Booking failed. Please try again."
-            );
-
-        } finally {
-
-            if (con != null) {
-
-                try {
-                    con.close();
-                } catch (Exception ignored) {
-                }
-            }
-        }
-    }
-
-
-
-    // ==========================================
-    // CANCEL BOOKING
-    // ==========================================
-
-    private static void cancelBooking(HttpExchange exchange)
-            throws IOException {
-
-        if (!exchange.getRequestMethod().equalsIgnoreCase("POST")) {
-            sendErrorPage(exchange, "Invalid request.");
-            return;
-        }
-
-        Map<String, String> data = parseForm(readBody(exchange));
-
-        int bookingId;
-        try {
-            bookingId = Integer.parseInt(
-                    data.getOrDefault("booking_id", "0"));
-        } catch (NumberFormatException e) {
-            sendErrorPage(exchange, "Invalid booking ID.");
-            return;
-        }
-
-        try (Connection con = DatabaseConnection.getConnection()) {
-
-            con.setAutoCommit(false);
-
-            int roomNumber;
-
-            String find = """
-                    SELECT room_number, status
-                    FROM bookings
-                    WHERE booking_id = ?
-                    FOR UPDATE
-                    """;
-
-            try (PreparedStatement ps = con.prepareStatement(find)) {
-                ps.setInt(1, bookingId);
-
-                try (ResultSet rs = ps.executeQuery()) {
-                    if (!rs.next()) {
-                        con.rollback();
-                        sendErrorPage(exchange, "Booking not found.");
-                        return;
-                    }
-
-                    if (!"ACTIVE".equalsIgnoreCase(rs.getString("status"))) {
-                        con.rollback();
-                        sendErrorPage(exchange,
-                                "Only active bookings can be cancelled.");
-                        return;
-                    }
-
-                    roomNumber = rs.getInt("room_number");
-                }
-            }
-
-            try (PreparedStatement ps = con.prepareStatement(
-                    "UPDATE bookings SET status='CANCELLED' WHERE booking_id=?")) {
-                ps.setInt(1, bookingId);
-                ps.executeUpdate();
-            }
-
-            try (PreparedStatement ps = con.prepareStatement(
-                    "UPDATE rooms SET available=TRUE WHERE room_number=?")) {
-                ps.setInt(1, roomNumber);
-                ps.executeUpdate();
-            }
-
-            con.commit();
-
-            sendActionPage(exchange,
-                    "Booking Cancelled",
-                    "Booking #" + bookingId + " has been cancelled successfully.",
-                    "/bookings.html",
-                    "Back to Bookings");
-
-        } catch (Exception e) {
-            e.printStackTrace();
-            sendErrorPage(exchange, "Could not cancel the booking.");
-        }
-    }
-
-
-    // ==========================================
-    // ROOM SERVICE
-    // ==========================================
-
-    private static void roomService(HttpExchange exchange)
-            throws IOException {
-
-        if (!exchange.getRequestMethod().equalsIgnoreCase("POST")) {
-            sendErrorPage(exchange, "Invalid request.");
-            return;
-        }
-
-        Map<String, String> data = parseForm(readBody(exchange));
-
-        int bookingId;
-        int quantity;
-        double price;
-
-        try {
-            bookingId = Integer.parseInt(
-                    data.getOrDefault("booking_id", "0"));
-            quantity = Integer.parseInt(
-                    data.getOrDefault("quantity", "0"));
-            price = Double.parseDouble(
-                    data.getOrDefault("price", "0"));
-        } catch (NumberFormatException e) {
-            sendErrorPage(exchange, "Invalid service details.");
-            return;
-        }
-
-        String serviceName =
-                data.getOrDefault("service_name", "").trim();
-
-        if (bookingId <= 0 || quantity <= 0 ||
-                price <= 0 || serviceName.isEmpty()) {
-            sendErrorPage(exchange, "Please enter valid service details.");
-            return;
-        }
-
-        try (Connection con = DatabaseConnection.getConnection()) {
-
-            String check = """
-                    SELECT status
-                    FROM bookings
-                    WHERE booking_id = ?
-                    """;
-
-            try (PreparedStatement ps = con.prepareStatement(check)) {
-                ps.setInt(1, bookingId);
-
-                try (ResultSet rs = ps.executeQuery()) {
-                    if (!rs.next()) {
-                        sendErrorPage(exchange, "Booking not found.");
-                        return;
-                    }
-
-                    if (!"ACTIVE".equalsIgnoreCase(rs.getString("status"))) {
-                        sendErrorPage(exchange,
-                                "Room service can only be added to an active booking.");
-                        return;
-                    }
-                }
-            }
-
-            double total = price * quantity;
-
-            String insert = """
-                    INSERT INTO room_services
-                    (booking_id, service_name, quantity, price, total)
-                    VALUES (?, ?, ?, ?, ?)
-                    """;
-
-            try (PreparedStatement ps = con.prepareStatement(insert)) {
-                ps.setInt(1, bookingId);
-                ps.setString(2, serviceName);
-                ps.setInt(3, quantity);
-                ps.setDouble(4, price);
-                ps.setDouble(5, total);
-                ps.executeUpdate();
-            }
-
-            sendActionPage(exchange,
-                    "Room Service Added",
-                    serviceName + " x " + quantity +
-                            " has been added to Booking #" + bookingId +
-                            " for Rs. " + String.format("%.2f", total),
-                    "/bookings.html",
-                    "Back to Bookings");
-
-        } catch (Exception e) {
-            e.printStackTrace();
-            sendErrorPage(exchange, "Could not add room service.");
-        }
-    }
-
-
-    // ==========================================
-    // ROOM SERVICE OPTIONS
-    // ==========================================
-
-    private static void serviceList(HttpExchange exchange)
-            throws IOException {
-
-        String json = """
-                [
-                    {"name":"Breakfast","price":300},
-                    {"name":"Lunch","price":500},
-                    {"name":"Dinner","price":600},
-                    {"name":"Tea / Coffee","price":150},
-                    {"name":"Extra Bed","price":800},
-                    {"name":"Laundry","price":250},
-                    {"name":"Room Cleaning","price":200}
-                ]
-                """;
-
-        sendJson(exchange, json);
-    }
-
-
-    // ==========================================
-    // CHECKOUT
-    // ==========================================
-
-    private static void checkout(HttpExchange exchange)
-            throws IOException {
-
-        if (!exchange.getRequestMethod().equalsIgnoreCase("POST")) {
-            sendErrorPage(exchange, "Invalid request.");
-            return;
-        }
-
-        Map<String, String> data = parseForm(readBody(exchange));
-
-        int bookingId;
-
-        try {
-            bookingId = Integer.parseInt(
-                    data.getOrDefault("booking_id", "0"));
-        } catch (NumberFormatException e) {
-            sendErrorPage(exchange, "Invalid booking ID.");
-            return;
-        }
-
-        try (Connection con = DatabaseConnection.getConnection()) {
-
-            con.setAutoCommit(false);
-
-            int roomNumber;
-
-            String check = """
-                    SELECT room_number, status
-                    FROM bookings
-                    WHERE booking_id = ?
-                    FOR UPDATE
-                    """;
-
-            try (PreparedStatement ps = con.prepareStatement(check)) {
-                ps.setInt(1, bookingId);
-
-                try (ResultSet rs = ps.executeQuery()) {
-                    if (!rs.next()) {
-                        con.rollback();
-                        sendErrorPage(exchange, "Booking not found.");
-                        return;
-                    }
-
-                    if (!"ACTIVE".equalsIgnoreCase(rs.getString("status"))) {
-                        con.rollback();
-                        sendErrorPage(exchange,
-                                "Only active bookings can be checked out.");
-                        return;
-                    }
-
-                    roomNumber = rs.getInt("room_number");
-                }
-            }
-
-            try (PreparedStatement ps = con.prepareStatement("""
-                    UPDATE bookings
-                    SET status='CHECKED_OUT',
-                        checkout_date=CURRENT_TIMESTAMP
-                    WHERE booking_id=?
-                    """)) {
-                ps.setInt(1, bookingId);
-                ps.executeUpdate();
-            }
-
-            try (PreparedStatement ps = con.prepareStatement(
-                    "UPDATE rooms SET available=TRUE WHERE room_number=?")) {
-                ps.setInt(1, roomNumber);
-                ps.executeUpdate();
-            }
-
-            con.commit();
-
-            redirect(exchange, "/invoice?booking_id=" + bookingId);
-
-        } catch (Exception e) {
-            e.printStackTrace();
-            sendErrorPage(exchange, "Checkout failed. Please try again.");
-        }
-    }
-
-
-    // ==========================================
-    // DIGITAL INVOICE
-    // ==========================================
-
-    private static void invoice(HttpExchange exchange)
-            throws IOException {
-
-        String rawQuery = exchange.getRequestURI().getRawQuery();
-
-        if (rawQuery == null || rawQuery.isEmpty()) {
-            sendErrorPage(exchange, "Booking ID is required.");
-            return;
-        }
-
-        Map<String, String> params = parseForm(rawQuery);
-
-        int bookingId;
-
-        try {
-            bookingId = Integer.parseInt(
-                    params.getOrDefault("booking_id", "0"));
-        } catch (NumberFormatException e) {
-            sendErrorPage(exchange, "Invalid booking ID.");
-            return;
-        }
-
-        try (Connection con = DatabaseConnection.getConnection()) {
-
-            String query = """
-                    SELECT
-                        b.booking_id,
-                        c.name,
-                        c.phone,
-                        b.room_number,
-                        r.room_type,
-                        r.price,
-                        b.days,
-                        b.total,
-                        b.status,
-                        b.booking_date,
-                        b.checkout_date
-                    FROM bookings b
-                    JOIN customers c ON b.customer_id=c.customer_id
-                    JOIN rooms r ON b.room_number=r.room_number
-                    WHERE b.booking_id=?
-                    """;
-
-            String name, phone, roomType, status;
-            String bookingDate, checkoutDate;
-            int roomNumber, days;
-            double roomPrice, roomTotal;
-
-            try (PreparedStatement ps = con.prepareStatement(query)) {
-
-                ps.setInt(1, bookingId);
-
-                try (ResultSet rs = ps.executeQuery()) {
-                    if (!rs.next()) {
-                        sendErrorPage(exchange, "Invoice not found.");
-                        return;
-                    }
-
-                    name = rs.getString("name");
-                    phone = rs.getString("phone");
-                    roomNumber = rs.getInt("room_number");
-                    roomType = rs.getString("room_type");
-                    roomPrice = rs.getDouble("price");
-                    days = rs.getInt("days");
-                    roomTotal = rs.getDouble("total");
-                    status = rs.getString("status");
-                    bookingDate = rs.getString("booking_date");
-                    checkoutDate = rs.getString("checkout_date");
-                }
-            }
-
-            double serviceTotal = 0;
-            StringBuilder serviceRows = new StringBuilder();
-
-            String serviceQuery = """
-                    SELECT service_name, quantity, price, total
-                    FROM room_services
-                    WHERE booking_id=?
-                    ORDER BY service_id
-                    """;
-
-            try (PreparedStatement ps = con.prepareStatement(serviceQuery)) {
-
-                ps.setInt(1, bookingId);
-
-                try (ResultSet rs = ps.executeQuery()) {
-
-                    while (rs.next()) {
-
-                        double total = rs.getDouble("total");
-                        serviceTotal += total;
-
-                        serviceRows.append("""
-                                <tr>
-                                    <td>%s</td>
-                                    <td>%d</td>
-                                    <td>Rs. %.2f</td>
-                                    <td>Rs. %.2f</td>
-                                </tr>
-                                """.formatted(
-                                escapeHtml(rs.getString("service_name")),
-                                rs.getInt("quantity"),
-                                rs.getDouble("price"),
-                                total));
-                    }
-                }
-            }
-
-            if (serviceRows.length() == 0) {
-                serviceRows.append("""
-                        <tr>
-                            <td colspan="4" style="text-align:center;">
-                                No room service charges
-                            </td>
-                        </tr>
-                        """);
-            }
-
-            double grandTotal = roomTotal + serviceTotal;
-
-            String html = """
-                    <!DOCTYPE html>
-                    <html>
-                    <head>
-                        <meta charset="UTF-8">
-                        <title>Grand Stay Hotel - Invoice #%d</title>
-                        <style>
-                            body {
-                                margin:0;
-                                padding:30px;
-                                background:#eef1f6;
-                                font-family:Arial,sans-serif;
-                                color:#1d2635;
-                            }
-                            .invoice {
-                                max-width:900px;
-                                margin:auto;
-                                background:white;
-                                padding:45px;
-                                border-radius:14px;
-                                box-shadow:0 10px 35px rgba(0,0,0,.12);
-                            }
-                            .top {
-                                display:flex;
-                                justify-content:space-between;
-                                border-bottom:3px solid #c9a227;
-                                padding-bottom:25px;
-                            }
-                            .hotel {
-                                font-size:30px;
-                                font-weight:bold;
-                                color:#14213d;
-                            }
-                            .gold { color:#b28a19; }
-                            .invoice-title { text-align:right; }
-                            .invoice-title h1 { margin:0; }
-                            .details {
-                                display:grid;
-                                grid-template-columns:1fr 1fr;
-                                gap:20px;
-                                margin:30px 0;
-                            }
-                            .box {
-                                background:#f7f8fb;
-                                padding:20px;
-                                border-radius:10px;
-                            }
-                            .box h3 { color:#b28a19; margin-top:0; }
-                            table {
-                                width:100%%;
-                                border-collapse:collapse;
-                                margin:15px 0 30px;
-                            }
-                            th {
-                                background:#14213d;
-                                color:white;
-                                padding:13px;
-                                text-align:left;
-                            }
-                            td {
-                                padding:13px;
-                                border-bottom:1px solid #e5e7eb;
-                            }
-                            .summary {
-                                width:330px;
-                                margin-left:auto;
-                            }
-                            .summary div {
-                                display:flex;
-                                justify-content:space-between;
-                                padding:10px 0;
-                            }
-                            .grand {
-                                border-top:2px solid #14213d;
-                                font-size:22px;
-                                font-weight:bold;
-                                color:#b28a19;
-                            }
-                            .thank {
-                                text-align:center;
-                                margin-top:35px;
-                                padding-top:25px;
-                                border-top:1px solid #ddd;
-                            }
-                            .buttons {
-                                text-align:center;
-                                margin-top:25px;
-                            }
-                            button, a {
-                                display:inline-block;
-                                background:#14213d;
-                                color:white;
-                                border:0;
-                                border-radius:8px;
-                                padding:12px 20px;
-                                margin:5px;
-                                text-decoration:none;
-                                cursor:pointer;
-                            }
-                            @media print {
-                                body { background:white; padding:0; }
-                                .invoice { box-shadow:none; }
-                                .buttons { display:none; }
-                            }
-                            @media(max-width:700px) {
-                                .top { flex-direction:column; gap:20px; }
-                                .invoice-title { text-align:left; }
-                                .details { grid-template-columns:1fr; }
-                                .summary { width:100%%; }
-                            }
-                        </style>
-                    </head>
-                    <body>
-                    <div class="invoice">
-
-                        <div class="top">
-                            <div>
-                                <div class="hotel">GRAND STAY HOTEL</div>
-                                <div class="gold">
-                                    Comfort • Luxury • Hospitality
-                                </div>
-                            </div>
-
-                            <div class="invoice-title">
-                                <h1>DIGITAL INVOICE</h1>
-                                <p>Invoice #INV-%d</p>
-                                <p>Status: %s</p>
-                            </div>
-                        </div>
-
-                        <div class="details">
-                            <div class="box">
-                                <h3>Guest Details</h3>
-                                <p><b>Name:</b> %s</p>
-                                <p><b>Phone:</b> %s</p>
-                            </div>
-
-                            <div class="box">
-                                <h3>Stay Details</h3>
-                                <p><b>Room:</b> %d</p>
-                                <p><b>Type:</b> %s</p>
-                                <p><b>Nights:</b> %d</p>
-                            </div>
-                        </div>
-
-                        <h2>Room Charges</h2>
-
-                        <table>
-                            <tr>
-                                <th>Description</th>
-                                <th>Nights</th>
-                                <th>Rate</th>
-                                <th>Total</th>
-                            </tr>
-                            <tr>
-                                <td>%s Room</td>
-                                <td>%d</td>
-                                <td>Rs. %.2f</td>
-                                <td>Rs. %.2f</td>
-                            </tr>
-                        </table>
-
-                        <h2>Room Service</h2>
-
-                        <table>
-                            <tr>
-                                <th>Service</th>
-                                <th>Quantity</th>
-                                <th>Price</th>
-                                <th>Total</th>
-                            </tr>
-                            %s
-                        </table>
-
-                        <div class="summary">
-                            <div>
-                                <span>Room Charges</span>
-                                <b>Rs. %.2f</b>
-                            </div>
-                            <div>
-                                <span>Room Service</span>
-                                <b>Rs. %.2f</b>
-                            </div>
-                            <div class="grand">
-                                <span>Grand Total</span>
-                                <b>Rs. %.2f</b>
-                            </div>
-                        </div>
-
-                        <div class="box" style="margin-top:30px;">
-                            <p><b>Booking Date:</b> %s</p>
-                            <p><b>Checkout Date:</b> %s</p>
-                        </div>
-
-                        <div class="thank">
-                            <b>Thank you for staying at Grand Stay Hotel!</b><br>
-                            We hope to welcome you again.
-                        </div>
-
-                        <div class="buttons">
-                            <button onclick="printInvoice()">
-                                Print Invoice
-                            </button>
-                            <button onclick="saveInvoiceAsPDF()">
-                                Save as PDF
-                            </button>
-                            <a href="/bookings.html">Back to Bookings</a>
-                        </div>
-
-                        <script>
-                            function printInvoice() {
-                                window.print();
-                            }
-
-                            function saveInvoiceAsPDF() {
-                                window.location.href =
-                                    "/invoice-pdf?booking_id=%d";
-                            }
-                        </script>
-
-                    </div>
-                    </body>
-                    </html>
-                    """.formatted(
-                    bookingId,
-                    bookingId,
-                    escapeHtml(status),
-                    escapeHtml(name),
-                    escapeHtml(phone),
-                    roomNumber,
-                    escapeHtml(roomType),
-                    days,
-                    escapeHtml(roomType),
-                    days,
-                    roomPrice,
-                    roomTotal,
-                    serviceRows.toString(),
-                    roomTotal,
-                    serviceTotal,
-                    grandTotal,
-                    escapeHtml(bookingDate),
-                    escapeHtml(checkoutDate == null ? "-" : checkoutDate),
-                    bookingId
-            );
-
-            sendHtml(exchange, html);
-
-        } catch (Exception e) {
-            e.printStackTrace();
-            sendErrorPage(exchange, "Could not generate invoice.");
-        }
-    }
-
-
-
-    // ==========================================
-    // DOWNLOAD INVOICE AS PDF
-    // ==========================================
-
-    private static void invoicePdf(HttpExchange exchange)
-            throws IOException {
-
-        String rawQuery = exchange.getRequestURI().getRawQuery();
-
-        if (rawQuery == null || rawQuery.isEmpty()) {
-            sendErrorPage(exchange, "Booking ID is required.");
-            return;
-        }
-
-        Map<String, String> params = parseForm(rawQuery);
-
-        int bookingId;
-
-        try {
-            bookingId = Integer.parseInt(
-                    params.getOrDefault("booking_id", "0"));
-        } catch (NumberFormatException e) {
-            sendErrorPage(exchange, "Invalid booking ID.");
-            return;
-        }
-
-        try (Connection con = DatabaseConnection.getConnection()) {
-
-            String query = """
-                    SELECT
-                        b.booking_id,
-                        c.name,
-                        c.phone,
-                        b.room_number,
-                        r.room_type,
-                        r.price,
-                        b.days,
-                        b.total,
-                        b.status,
-                        b.booking_date,
-                        b.checkout_date
-                    FROM bookings b
-                    JOIN customers c
-                        ON b.customer_id = c.customer_id
-                    JOIN rooms r
-                        ON b.room_number = r.room_number
-                    WHERE b.booking_id = ?
-                    """;
-
-            String name;
-            String phone;
-            String roomType;
-            String status;
-            String bookingDate;
-            String checkoutDate;
-
-            int roomNumber;
-            int days;
-
-            double roomPrice;
-            double roomTotal;
-
-            try (PreparedStatement ps =
-                         con.prepareStatement(query)) {
-
-                ps.setInt(1, bookingId);
-
-                try (ResultSet rs = ps.executeQuery()) {
-
-                    if (!rs.next()) {
-                        sendErrorPage(exchange,
-                                "Invoice not found.");
-                        return;
-                    }
-
-                    name = rs.getString("name");
-                    phone = rs.getString("phone");
-                    roomNumber = rs.getInt("room_number");
-                    roomType = rs.getString("room_type");
-                    roomPrice = rs.getDouble("price");
-                    days = rs.getInt("days");
-                    roomTotal = rs.getDouble("total");
-                    status = rs.getString("status");
-                    bookingDate = rs.getString("booking_date");
-                    checkoutDate = rs.getString("checkout_date");
-                }
-            }
-
-            double serviceTotal = 0;
-
-            List<String> serviceNames = new ArrayList<>();
-            List<Integer> serviceQuantities = new ArrayList<>();
-            List<Double> servicePrices = new ArrayList<>();
-            List<Double> serviceTotals = new ArrayList<>();
-
-            String serviceQuery = """
-                    SELECT service_name, quantity, price, total
-                    FROM room_services
-                    WHERE booking_id = ?
-                    ORDER BY service_id
-                    """;
-
-            try (PreparedStatement ps =
-                         con.prepareStatement(serviceQuery)) {
-
-                ps.setInt(1, bookingId);
-
-                try (ResultSet rs = ps.executeQuery()) {
-
-                    while (rs.next()) {
-
-                        String serviceName =
-                                rs.getString("service_name");
-
-                        int quantity =
-                                rs.getInt("quantity");
-
-                        double price =
-                                rs.getDouble("price");
-
-                        double total =
-                                rs.getDouble("total");
-
-                        serviceNames.add(serviceName);
-                        serviceQuantities.add(quantity);
-                        servicePrices.add(price);
-                        serviceTotals.add(total);
-
-                        serviceTotal += total;
-                    }
-                }
-            }
 
             double grandTotal =
-                    roomTotal + serviceTotal;
+                    roomTotal +
+                    serviceTotal;
 
-            List<String> lines = new ArrayList<>();
 
-            lines.add("GRAND STAY HOTEL");
-            lines.add("Comfort - Luxury - Hospitality");
-            lines.add("");
-            lines.add("DIGITAL INVOICE");
-            lines.add("Invoice No: INV-" + bookingId);
-            lines.add("Status: " + safePdfText(status));
-            lines.add("");
-            lines.add("GUEST DETAILS");
-            lines.add("Name: " + safePdfText(name));
-            lines.add("Phone: " + safePdfText(phone));
-            lines.add("");
-            lines.add("STAY DETAILS");
-            lines.add("Room: " + roomNumber);
-            lines.add("Type: " + safePdfText(roomType));
-            lines.add("Nights: " + days);
-            lines.add("");
-            lines.add("ROOM CHARGES");
-            lines.add("Room Type: " + safePdfText(roomType));
-            lines.add("Rate per Night: Rs. " +
-                    String.format(Locale.US, "%.2f", roomPrice));
-            lines.add("Room Total: Rs. " +
-                    String.format(Locale.US, "%.2f", roomTotal));
-            lines.add("");
-            lines.add("ROOM SERVICES");
+            StringBuilder serviceRows =
+                    new StringBuilder();
 
-            if (serviceNames.isEmpty()) {
 
-                lines.add("No room service charges");
+            try (
+                    PreparedStatement ps =
+                            con.prepareStatement(
+                                    "SELECT service_name," +
+                                    "quantity,price,total " +
+                                    "FROM room_services " +
+                                    "WHERE booking_id=? " +
+                                    "ORDER BY service_id"
+                            )
+            ) {
 
-            } else {
+                ps.setInt(
+                        1,
+                        bookingId
+                );
 
-                for (int i = 0;
-                     i < serviceNames.size();
-                     i++) {
 
-                    lines.add(
-                            safePdfText(serviceNames.get(i))
-                                    + " x"
-                                    + serviceQuantities.get(i)
-                                    + " @ Rs. "
-                                    + String.format(
-                                            Locale.US,
-                                            "%.2f",
-                                            servicePrices.get(i))
-                                    + " = Rs. "
-                                    + String.format(
-                                            Locale.US,
-                                            "%.2f",
-                                            serviceTotals.get(i))
-                    );
+                try (
+                        ResultSet rs =
+                                ps.executeQuery()
+                ) {
+
+                    while (rs.next()) {
+
+                        serviceRows.append(
+                                "<tr>"
+                        );
+
+                        serviceRows.append(
+                                "<td>"
+                        );
+
+                        serviceRows.append(
+                                esc(
+                                        rs.getString(
+                                                1
+                                        )
+                                )
+                        );
+
+                        serviceRows.append(
+                                "</td>"
+                        );
+
+                        serviceRows.append(
+                                "<td>"
+                        );
+
+                        serviceRows.append(
+                                rs.getInt(2)
+                        );
+
+                        serviceRows.append(
+                                "</td>"
+                        );
+
+                        serviceRows.append(
+                                "<td>INR "
+                        );
+
+                        serviceRows.append(
+                                String.format(
+                                        Locale.US,
+                                        "%.2f",
+                                        rs.getDouble(3)
+                                )
+                        );
+
+                        serviceRows.append(
+                                "</td>"
+                        );
+
+                        serviceRows.append(
+                                "<td>INR "
+                        );
+
+                        serviceRows.append(
+                                String.format(
+                                        Locale.US,
+                                        "%.2f",
+                                        rs.getDouble(4)
+                                )
+                        );
+
+                        serviceRows.append(
+                                "</td>"
+                        );
+
+                        serviceRows.append(
+                                "</tr>"
+                        );
+                    }
                 }
             }
 
-            lines.add("");
-            lines.add("PAYMENT SUMMARY");
-            lines.add("Room Charges: Rs. " +
+
+            double nightlyRate =
+                    days == 0
+                            ? 0
+                            : roomTotal / days;
+
+
+            String html =
+                    "<!DOCTYPE html>" +
+
+                    "<html>" +
+
+                    "<head>" +
+
+                    "<meta charset='UTF-8'>" +
+
+                    "<title>Invoice #" +
+                    bookingId +
+                    "</title>" +
+
+                    "<link rel='stylesheet' " +
+                    "href='/css/style.css'>" +
+
+                    "</head>" +
+
+                    "<body class='invoice-page'>" +
+
+                    "<div class='invoice-card'>" +
+
+                    "<div class='invoice-head'>" +
+
+                    "<div>" +
+
+                    "<div class='invoice-logo'>GS</div>" +
+
+                    "<h1>Grand Stay Hotel</h1>" +
+
+                    "<p>Guest Invoice</p>" +
+
+                    "</div>" +
+
+                    "<div class='invoice-id'>" +
+
+                    "Invoice #" +
+                    bookingId +
+
+                    "</div>" +
+
+                    "</div>" +
+
+
+                    "<div class='invoice-info'>" +
+
+                    "<div>" +
+
+                    "<b>Guest</b><br>" +
+
+                    esc(name) +
+
+                    "<br>" +
+
+                    esc(phone) +
+
+                    "</div>" +
+
+
+                    "<div>" +
+
+                    "<b>Room</b><br>" +
+
+                    room +
+
+                    " · " +
+
+                    esc(roomType) +
+
+                    "<br>" +
+
+                    days +
+
+                    " night(s)" +
+
+                    "</div>" +
+
+
+                    "<div>" +
+
+                    "<b>Status</b><br>" +
+
+                    esc(status) +
+
+                    "<br>" +
+
+                    esc(
+                            checkoutDate.isBlank()
+                                    ? bookingDate
+                                    : checkoutDate
+                    ) +
+
+                    "</div>" +
+
+                    "</div>" +
+
+
+                    "<table class='invoice-table'>" +
+
+                    "<thead>" +
+
+                    "<tr>" +
+
+                    "<th>Item</th>" +
+
+                    "<th>Qty</th>" +
+
+                    "<th>Price</th>" +
+
+                    "<th>Total</th>" +
+
+                    "</tr>" +
+
+                    "</thead>" +
+
+                    "<tbody>" +
+
+                    "<tr>" +
+
+                    "<td>Room stay</td>" +
+
+                    "<td>" +
+                    days +
+                    "</td>" +
+
+                    "<td>INR " +
+
                     String.format(
                             Locale.US,
                             "%.2f",
-                            roomTotal));
-            lines.add("Room Service: Rs. " +
+                            nightlyRate
+                    ) +
+
+                    "</td>" +
+
+                    "<td>INR " +
+
                     String.format(
                             Locale.US,
                             "%.2f",
-                            serviceTotal));
-            lines.add("GRAND TOTAL: Rs. " +
+                            roomTotal
+                    ) +
+
+                    "</td>" +
+
+                    "</tr>" +
+
+                    serviceRows +
+
+                    "</tbody>" +
+
+                    "</table>" +
+
+
+                    "<div class='invoice-total'>" +
+
+                    "<span>Room Total</span>" +
+
+                    "<b>INR " +
+
                     String.format(
                             Locale.US,
                             "%.2f",
-                            grandTotal));
-            lines.add("");
-            lines.add("Booking Date: " +
-                    safePdfText(bookingDate));
-            lines.add("Checkout Date: " +
-                    safePdfText(
-                            checkoutDate == null
-                                    ? "-"
-                                    : checkoutDate));
-            lines.add("");
-            lines.add("Thank you for staying at Grand Stay Hotel!");
-            lines.add("We hope to welcome you again.");
+                            roomTotal
+                    ) +
 
-            byte[] pdf = createSimplePdf(lines);
+                    "</b>" +
 
-            exchange.getResponseHeaders().set(
-                    "Content-Type",
-                    "application/pdf");
 
-            exchange.getResponseHeaders().set(
-                    "Content-Disposition",
-                    "attachment; filename=\"Invoice-"
-                            + bookingId
-                            + ".pdf\"");
+                    "<span>Services</span>" +
 
-            exchange.getResponseHeaders().set(
-                    "Cache-Control",
-                    "no-store");
+                    "<b>INR " +
+
+                    String.format(
+                            Locale.US,
+                            "%.2f",
+                            serviceTotal
+                    ) +
+
+                    "</b>" +
+
+
+                    "<span>Grand Total</span>" +
+
+                    "<strong>INR " +
+
+                    String.format(
+                            Locale.US,
+                            "%.2f",
+                            grandTotal
+                    ) +
+
+                    "</strong>" +
+
+                    "</div>" +
+
+
+                    "<div class='invoice-actions'>" +
+
+                    "<button " +
+                    "class='btn primary' " +
+                    "onclick='window.print()'>" +
+
+                    "Print" +
+
+                    "</button>" +
+
+
+                    "<a class='btn secondary' " +
+                    "href='/invoice-pdf?booking_id=" +
+                    bookingId +
+                    "'>" +
+
+                    "Save as PDF" +
+
+                    "</a>" +
+
+
+                    "<a class='btn secondary' " +
+                    "href='/bookings.html'>" +
+
+                    "Back to History" +
+
+                    "</a>" +
+
+                    "</div>" +
+
+                    "</div>" +
+
+                    "</body>" +
+
+                    "</html>";
+
+
+            sendHtml(
+                    exchange,
+                    html
+            );
+
+
+        } catch (Exception e) {
+
+            sendError(
+                    exchange,
+                    e.getMessage()
+            );
+        }
+    }
+
+
+    // ==================================================
+    // PDF
+    // ==================================================
+
+    private static void invoicePdf(
+            HttpExchange exchange)
+            throws IOException {
+
+
+        Map<String, String> query =
+                parseForm(
+                        exchange.getRequestURI()
+                                .getRawQuery()
+                );
+
+
+        int bookingId =
+                intValue(
+                        query.get("booking_id"),
+                        0
+                );
+
+
+        try (
+                Connection con =
+                        DatabaseConnection.getConnection()
+        ) {
+
+
+            String name = "";
+            String status = "";
+
+            int room = 0;
+            int days = 0;
+
+            double roomTotal = 0;
+            double serviceTotal = 0;
+
+
+            String q =
+                    "SELECT " +
+
+                    "c.name," +
+                    "b.room_number," +
+                    "b.days," +
+                    "b.total," +
+                    "b.status," +
+
+                    "COALESCE((" +
+                    "SELECT SUM(rs.total) " +
+                    "FROM room_services rs " +
+                    "WHERE rs.booking_id=b.booking_id" +
+                    "),0) " +
+
+                    "FROM bookings b " +
+
+                    "JOIN customers c " +
+                    "ON b.customer_id=c.customer_id " +
+
+                    "WHERE b.booking_id=?";
+
+
+            try (
+                    PreparedStatement ps =
+                            con.prepareStatement(q)
+            ) {
+
+                ps.setInt(
+                        1,
+                        bookingId
+                );
+
+
+                try (
+                        ResultSet rs =
+                                ps.executeQuery()
+                ) {
+
+                    if (!rs.next()) {
+
+                        sendError(
+                                exchange,
+                                "Booking not found."
+                        );
+
+                        return;
+                    }
+
+
+                    name =
+                            rs.getString(1);
+
+                    room =
+                            rs.getInt(2);
+
+                    days =
+                            rs.getInt(3);
+
+                    roomTotal =
+                            rs.getDouble(4);
+
+                    status =
+                            rs.getString(5);
+
+                    serviceTotal =
+                            rs.getDouble(6);
+                }
+            }
+
+
+            double grand =
+                    roomTotal +
+                    serviceTotal;
+
+
+            List<String> lines =
+                    Arrays.asList(
+
+                            "GRAND STAY HOTEL",
+
+                            "Guest Invoice #" +
+                            bookingId,
+
+                            "Guest: " +
+                            name,
+
+                            "Room: " +
+                            room,
+
+                            "Nights: " +
+                            days,
+
+                            "Status: " +
+                            status,
+
+                            "Room total: INR " +
+                            String.format(
+                                    Locale.US,
+                                    "%.2f",
+                                    roomTotal
+                            ),
+
+                            "Services: INR " +
+                            String.format(
+                                    Locale.US,
+                                    "%.2f",
+                                    serviceTotal
+                            ),
+
+                            "Grand total: INR " +
+                            String.format(
+                                    Locale.US,
+                                    "%.2f",
+                                    grand
+                            )
+                    );
+
+
+            byte[] pdf =
+                    simplePdf(lines);
+
+
+            exchange.getResponseHeaders()
+                    .set(
+                            "Content-Type",
+                            "application/pdf"
+                    );
+
+
+            exchange.getResponseHeaders()
+                    .set(
+                            "Content-Disposition",
+                            "attachment; filename=\"invoice-"
+                            + bookingId +
+                            ".pdf\""
+                    );
+
 
             exchange.sendResponseHeaders(
                     200,
-                    pdf.length);
+                    pdf.length
+            );
 
-            try (OutputStream os =
-                         exchange.getResponseBody()) {
 
-                os.write(pdf);
+            try (
+                    OutputStream out =
+                            exchange.getResponseBody()
+            ) {
+
+                out.write(pdf);
             }
+
 
         } catch (Exception e) {
 
-            e.printStackTrace();
-
-            sendErrorPage(
+            sendError(
                     exchange,
-                    "Could not download invoice PDF.");
+                    e.getMessage()
+            );
         }
     }
 
 
-    private static String safePdfText(String value) {
+    // ==================================================
+    // ADD FLOOR
+    // ==================================================
 
-        if (value == null)
-            return "-";
+    private static void addFloor(
+            HttpExchange exchange)
+            throws IOException {
+
+
+        if (!"POST".equalsIgnoreCase(
+                exchange.getRequestMethod())) {
+
+            sendJson(
+                    exchange,
+                    "{\"success\":false," +
+                    "\"message\":\"Invalid request.\"}"
+            );
+
+            return;
+        }
+
+
+        try (
+                Connection con =
+                        DatabaseConnection.getConnection()
+        ) {
+
+
+            int floor =
+                    scalarInt(
+                            con,
+                            "SELECT COALESCE(" +
+                            "MAX(floor_number),0)+1 " +
+                            "FROM rooms"
+                    );
+
+
+            con.setAutoCommit(false);
+
+
+            try (
+                    PreparedStatement ps =
+                            con.prepareStatement(
+                                    "INSERT INTO rooms " +
+                                    "(room_number,floor_number," +
+                                    "room_type,price,available)" +
+                                    "VALUES(?,?,?,?,TRUE)"
+                            )
+            ) {
+
+
+                int[] rooms = {
+
+                        floor * 100 + 1,
+                        floor * 100 + 2,
+                        floor * 100 + 3
+                };
+
+
+                String[] types = {
+
+                        "Single",
+                        "Single",
+                        "Deluxe"
+                };
+
+
+                double[] prices = {
+
+                        1500,
+                        1500,
+                        4000
+                };
+
+
+                for (
+                        int i = 0;
+                        i < 3;
+                        i++
+                ) {
+
+                    ps.setInt(
+                            1,
+                            rooms[i]
+                    );
+
+                    ps.setInt(
+                            2,
+                            floor
+                    );
+
+                    ps.setString(
+                            3,
+                            types[i]
+                    );
+
+                    ps.setDouble(
+                            4,
+                            prices[i]
+                    );
+
+                    ps.addBatch();
+                }
+
+
+                ps.executeBatch();
+            }
+
+
+            con.commit();
+
+
+            sendJson(
+                    exchange,
+                    "{\"success\":true," +
+                    "\"floor\":" +
+                    floor +
+                    "}"
+            );
+
+
+        } catch (Exception e) {
+
+            sendJson(
+                    exchange,
+                    "{\"success\":false," +
+                    "\"message\":\"" +
+                    jsonEscape(
+                            e.getMessage()
+                    ) +
+                    "\"}"
+            );
+        }
+    }
+
+
+    // ==================================================
+    // DELETE FLOOR
+    // ==================================================
+
+    private static void deleteFloor(
+            HttpExchange exchange)
+            throws IOException {
+
+
+        if (!"POST".equalsIgnoreCase(
+                exchange.getRequestMethod())) {
+
+            sendJson(
+                    exchange,
+                    "{\"success\":false," +
+                    "\"message\":\"Invalid request.\"}"
+            );
+
+            return;
+        }
+
+
+        Map<String, String> data =
+                parseForm(
+                        readBody(exchange)
+                );
+
+
+        int floor =
+                intValue(
+                        data.get("floor"),
+                        0
+                );
+
+
+        if (floor <= 0) {
+
+            sendJson(
+                    exchange,
+                    "{\"success\":false," +
+                    "\"message\":\"Invalid floor.\"}"
+            );
+
+            return;
+        }
+
+
+        try (
+                Connection con =
+                        DatabaseConnection.getConnection()
+        ) {
+
+
+            int floors =
+                    scalarInt(
+                            con,
+                            "SELECT COUNT(DISTINCT " +
+                            "floor_number) FROM rooms"
+                    );
+
+
+            if (floors <= 1) {
+
+                sendJson(
+                        exchange,
+                        "{\"success\":false," +
+                        "\"message\":\"At least one floor must remain.\"}"
+                );
+
+                return;
+            }
+
+
+            int active =
+                    scalarInt(
+                            con,
+                            "SELECT COUNT(*) " +
+                            "FROM bookings b " +
+                            "JOIN rooms r " +
+                            "ON b.room_number=r.room_number " +
+                            "WHERE r.floor_number=" +
+                            floor +
+                            " AND b.status='ACTIVE'"
+                    );
+
+
+            if (active > 0) {
+
+                sendJson(
+                        exchange,
+                        "{\"success\":false," +
+                        "\"message\":\"Cannot delete a floor with active bookings.\"}"
+                );
+
+                return;
+            }
+
+
+            con.setAutoCommit(false);
+
+
+            try (
+                    PreparedStatement ps =
+                            con.prepareStatement(
+                                    "DELETE rs FROM " +
+                                    "room_services rs " +
+                                    "JOIN bookings b " +
+                                    "ON rs.booking_id=b.booking_id " +
+                                    "JOIN rooms r " +
+                                    "ON b.room_number=r.room_number " +
+                                    "WHERE r.floor_number=?"
+                            )
+            ) {
+
+                ps.setInt(
+                        1,
+                        floor
+                );
+
+                ps.executeUpdate();
+            }
+
+
+            try (
+                    PreparedStatement ps =
+                            con.prepareStatement(
+                                    "DELETE b FROM bookings b " +
+                                    "JOIN rooms r " +
+                                    "ON b.room_number=r.room_number " +
+                                    "WHERE r.floor_number=?"
+                            )
+            ) {
+
+                ps.setInt(
+                        1,
+                        floor
+                );
+
+                ps.executeUpdate();
+            }
+
+
+            try (
+                    PreparedStatement ps =
+                            con.prepareStatement(
+                                    "DELETE FROM rooms " +
+                                    "WHERE floor_number=?"
+                            )
+            ) {
+
+                ps.setInt(
+                        1,
+                        floor
+                );
+
+                ps.executeUpdate();
+            }
+
+
+            con.commit();
+
+
+            sendJson(
+                    exchange,
+                    "{\"success\":true}"
+            );
+
+
+        } catch (Exception e) {
+
+            sendJson(
+                    exchange,
+                    "{\"success\":false," +
+                    "\"message\":\"" +
+                    jsonEscape(
+                            e.getMessage()
+                    ) +
+                    "\"}"
+            );
+        }
+    }
+
+
+    // ==================================================
+    // HELPERS
+    // ==================================================
+
+    private static int scalarInt(
+            Connection con,
+            String sql)
+            throws SQLException {
+
+
+        try (
+                PreparedStatement ps =
+                        con.prepareStatement(sql);
+
+                ResultSet rs =
+                        ps.executeQuery()
+        ) {
+
+            if (rs.next()) {
+
+                return rs.getInt(1);
+            }
+
+
+            return 0;
+        }
+    }
+
+
+    private static double scalarDouble(
+            Connection con,
+            String sql)
+            throws SQLException {
+
+
+        try (
+                PreparedStatement ps =
+                        con.prepareStatement(sql);
+
+                ResultSet rs =
+                        ps.executeQuery()
+        ) {
+
+            if (rs.next()) {
+
+                return rs.getDouble(1);
+            }
+
+
+            return 0.0;
+        }
+    }
+
+
+    private static int intValue(
+            String value,
+            int defaultValue) {
+
+        try {
+
+            return Integer.parseInt(
+                    value == null
+                            ? ""
+                            : value
+            );
+
+        } catch (Exception e) {
+
+            return defaultValue;
+        }
+    }
+
+
+    private static String formatDate(
+            Timestamp timestamp) {
+
+        if (timestamp == null) {
+
+            return "";
+        }
+
+
+        return new SimpleDateFormat(
+                "dd MMM yyyy, hh:mm a",
+                Locale.ENGLISH
+        ).format(timestamp);
+    }
+
+
+    private static String esc(
+            String value) {
+
+        if (value == null) {
+
+            return "";
+        }
+
 
         return value
-                .replace("\\", "/")
+                .replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;")
+                .replace("\"", "&quot;")
+                .replace("'", "&#39;");
+    }
+
+
+    private static String jsonEscape(
+            String value) {
+
+        if (value == null) {
+
+            return "";
+        }
+
+
+        return value
+                .replace("\\", "\\\\")
+                .replace("\"", "\\\"")
                 .replace("\r", " ")
                 .replace("\n", " ");
     }
 
 
-    private static byte[] createSimplePdf(
-            List<String> lines)
-            throws IOException {
-
-        /*
-         * This creates a real PDF using only Java's standard library.
-         * It intentionally uses the built-in Helvetica font so no
-         * additional PDF library is required.
-         */
-
-        final int pageWidth = 595;
-        final int pageHeight = 842;
-
-        final int marginLeft = 50;
-        final int startY = 790;
-        final int lineHeight = 16;
-
-        int linesPerPage =
-                (startY - 55) / lineHeight;
-
-        List<List<String>> pages =
-                new ArrayList<>();
-
-        for (int i = 0; i < lines.size(); ) {
-
-            List<String> pageLines =
-                    new ArrayList<>();
-
-            for (int j = 0;
-                 j < linesPerPage && i < lines.size();
-                 j++, i++) {
-
-                pageLines.add(lines.get(i));
-            }
-
-            pages.add(pageLines);
-        }
-
-        if (pages.isEmpty()) {
-            pages.add(new ArrayList<>());
-        }
-
-        int pageCount = pages.size();
-
-        /*
-         * Object numbering:
-         *
-         * 1 = Catalog
-         * 2 = Pages
-         * 3 = Font
-         * then, for each page:
-         * Page object
-         * Content stream object
-         */
-
-        int totalObjects =
-                3 + (pageCount * 2);
-
-        ByteArrayOutputStream pdf =
-                new ByteArrayOutputStream();
-
-        List<Integer> offsets =
-                new ArrayList<>();
-
-        writePdf(pdf, "%PDF-1.4\n%\u00E2\u00E3\u00CF\u00D3\n");
-
-        // Object 1 - Catalog
-        offsets.add(pdf.size());
-        writePdf(pdf,
-                "1 0 obj\n"
-                        + "<< /Type /Catalog "
-                        + "/Pages 2 0 R >>\n"
-                        + "endobj\n");
-
-        // Object 2 - Pages
-        offsets.add(pdf.size());
-
-        StringBuilder kids =
-                new StringBuilder();
-
-        for (int i = 0; i < pageCount; i++) {
-
-            int pageObject =
-                    4 + (i * 2);
-
-            kids.append(pageObject)
-                    .append(" 0 R ");
-        }
-
-        writePdf(pdf,
-                "2 0 obj\n"
-                        + "<< /Type /Pages "
-                        + "/Kids ["
-                        + kids
-                        + "] "
-                        + "/Count "
-                        + pageCount
-                        + " >>\n"
-                        + "endobj\n");
-
-        // Object 3 - Helvetica font
-        offsets.add(pdf.size());
-
-        writePdf(pdf,
-                "3 0 obj\n"
-                        + "<< /Type /Font "
-                        + "/Subtype /Type1 "
-                        + "/BaseFont /Helvetica >>\n"
-                        + "endobj\n");
-
-        for (int pageIndex = 0;
-             pageIndex < pageCount;
-             pageIndex++) {
-
-            int pageObject =
-                    4 + (pageIndex * 2);
-
-            int contentObject =
-                    pageObject + 1;
-
-            List<String> pageLines =
-                    pages.get(pageIndex);
-
-            StringBuilder stream =
-                    new StringBuilder();
-
-            stream.append("BT\n");
-            stream.append("/F1 20 Tf\n");
-            stream.append("50 790 Td\n");
-
-            boolean firstLine = true;
-
-            for (String line : pageLines) {
-
-                String clean =
-                        safePdfText(line);
-
-                if (firstLine) {
-
-                    firstLine = false;
-
-                } else {
-
-                    stream.append("0 -")
-                            .append(lineHeight)
-                            .append(" Td\n");
-                }
-
-                if (clean.equals("GRAND STAY HOTEL")) {
-
-                    stream.append("/F1 22 Tf\n");
-
-                } else if (
-                        clean.equals("DIGITAL INVOICE")
-                                || clean.equals("GUEST DETAILS")
-                                || clean.equals("STAY DETAILS")
-                                || clean.equals("ROOM CHARGES")
-                                || clean.equals("ROOM SERVICES")
-                                || clean.equals("PAYMENT SUMMARY")) {
-
-                    stream.append("/F1 14 Tf\n");
-
-                } else if (
-                        clean.startsWith("GRAND TOTAL:")) {
-
-                    stream.append("/F1 14 Tf\n");
-
-                } else {
-
-                    stream.append("/F1 10 Tf\n");
-                }
-
-                stream.append("(")
-                        .append(pdfEscape(clean))
-                        .append(") Tj\n");
-            }
-
-            stream.append("ET\n");
-
-            byte[] streamBytes =
-                    stream.toString()
-                            .getBytes(StandardCharsets.US_ASCII);
-
-            // Page object
-            offsets.add(pdf.size());
-
-            writePdf(pdf,
-                    pageObject
-                            + " 0 obj\n"
-                            + "<< /Type /Page "
-                            + "/Parent 2 0 R "
-                            + "/MediaBox [0 0 "
-                            + pageWidth
-                            + " "
-                            + pageHeight
-                            + "] "
-                            + "/Resources << "
-                            + "/Font << /F1 3 0 R >> "
-                            + ">> "
-                            + "/Contents "
-                            + contentObject
-                            + " 0 R >>\n"
-                            + "endobj\n");
-
-            // Content stream object
-            offsets.add(pdf.size());
-
-            writePdf(pdf,
-                    contentObject
-                            + " 0 obj\n"
-                            + "<< /Length "
-                            + streamBytes.length
-                            + " >>\n"
-                            + "stream\n");
-
-            pdf.write(streamBytes);
-
-            writePdf(pdf,
-                    "endstream\n"
-                            + "endobj\n");
-        }
-
-        int xrefOffset = pdf.size();
-
-        writePdf(pdf,
-                "xref\n"
-                        + "0 "
-                        + (totalObjects + 1)
-                        + "\n");
-
-        writePdf(pdf,
-                "0000000000 65535 f \n");
-
-        for (int offset : offsets) {
-
-            writePdf(pdf,
-                    String.format(
-                            Locale.US,
-                            "%010d 00000 n \n",
-                            offset));
-        }
-
-        writePdf(pdf,
-                "trailer\n"
-                        + "<< /Size "
-                        + (totalObjects + 1)
-                        + " /Root 1 0 R >>\n"
-                        + "startxref\n"
-                        + xrefOffset
-                        + "\n"
-                        + "%%EOF\n");
-
-        return pdf.toByteArray();
-    }
-
-
-    private static String pdfEscape(String value) {
-
-        return value
-                .replace("\\", "\\\\")
-                .replace("(", "\\(")
-                .replace(")", "\\)");
-    }
-
-
-    private static void writePdf(
-            OutputStream output,
-            String value)
-            throws IOException {
-
-        output.write(
-                value.getBytes(
-                        StandardCharsets.US_ASCII));
-    }
-
-
-    // ==========================================
-    // ACTION PAGE
-    // ==========================================
-
-    private static void sendActionPage(
-            HttpExchange exchange,
-            String title,
-            String message,
-            String link,
-            String linkText) throws IOException {
-
-        String html = """
-                <!DOCTYPE html>
-                <html>
-                <head>
-                    <title>%s</title>
-                    <link rel="stylesheet" href="/css/style.css">
-                </head>
-                <body>
-                <div class="message-page">
-                    <div class="success-card">
-                        <div class="success-icon">✓</div>
-                        <h1>%s</h1>
-                        <p class="success-text">%s</p>
-                        <div class="message-buttons">
-                            <a href="%s">%s</a>
-                            <a href="/dashboard.html">Dashboard</a>
-                        </div>
-                    </div>
-                </div>
-                </body>
-                </html>
-                """.formatted(
-                escapeHtml(title),
-                escapeHtml(title),
-                escapeHtml(message),
-                link,
-                escapeHtml(linkText));
-
-        sendHtml(exchange, html);
-    }
-
-
-    // ==========================================
-    // SERVE FILE
-    // ==========================================
-
-    private static void serveFile(
-            HttpExchange exchange,
-            String fileName)
-            throws IOException {
-
-        File file =
-                new File(
-                        "webapp",
-                        fileName
-                );
-
-        if (!file.exists()) {
-
-            String error =
-                    "File not found: "
-                    + fileName;
-
-            exchange.sendResponseHeaders(
-                    404,
-                    error.length()
-            );
-
-            try (OutputStream os =
-                         exchange.getResponseBody()) {
-
-                os.write(
-                        error.getBytes(
-                                StandardCharsets.UTF_8));
-            }
-
-            return;
-        }
-
-        byte[] data =
-                java.nio.file.Files.readAllBytes(
-                        file.toPath());
-
-        String contentType =
-                "text/html; charset=UTF-8";
-
-        if (fileName.endsWith(".css")) {
-
-            contentType =
-                    "text/css; charset=UTF-8";
-        }
-
-        exchange.getResponseHeaders()
-                .set(
-                        "Content-Type",
-                        contentType
-                );
-
-        exchange.sendResponseHeaders(
-                200,
-                data.length
-        );
-
-        try (OutputStream os =
-                     exchange.getResponseBody()) {
-
-            os.write(data);
-        }
-    }
-
-
-    // ==========================================
-    // READ BODY
-    // ==========================================
-
-    private static String readBody(
-            HttpExchange exchange)
-            throws IOException {
-
-        try (InputStream is =
-                     exchange.getRequestBody();
-
-             ByteArrayOutputStream buffer =
-                     new ByteArrayOutputStream()) {
-
-            byte[] data =
-                    new byte[1024];
-
-            int n;
-
-            while ((n = is.read(data)) != -1) {
-
-                buffer.write(
-                        data,
-                        0,
-                        n
-                );
-            }
-
-            return buffer.toString(
-                    StandardCharsets.UTF_8
-            );
-        }
-    }
-
-
-    // ==========================================
-    // FORM PARSER
-    // ==========================================
-
-    private static Map<String, String>
-    parseForm(String body) {
+    private static Map<String, String> parseForm(
+            String body) {
 
         Map<String, String> map =
                 new HashMap<>();
 
-        if (body == null || body.isEmpty()) {
+
+        if (
+                body == null
+                        ||
+                body.isBlank()
+        ) {
 
             return map;
         }
 
-        String[] pairs =
-                body.split("&");
 
-        for (String pair : pairs) {
+        for (
+                String item :
+                body.split("&")
+        ) {
 
-            String[] parts =
-                    pair.split("=", 2);
-
-            String key =
-                    URLDecoder.decode(
-                            parts[0],
-                            StandardCharsets.UTF_8
+            String[] pair =
+                    item.split(
+                            "=",
+                            2
                     );
 
-            String value =
-                    parts.length > 1
-                    ? URLDecoder.decode(
-                            parts[1],
-                            StandardCharsets.UTF_8)
-                    : "";
 
-            map.put(key, value);
+            String key =
+                    urlDecode(
+                            pair[0]
+                    );
+
+
+            String value =
+                    pair.length > 1
+                            ? urlDecode(pair[1])
+                            : "";
+
+
+            map.put(
+                    key,
+                    value
+            );
         }
+
 
         return map;
     }
 
 
-    // ==========================================
-    // REDIRECT
-    // ==========================================
+    private static String urlDecode(
+            String value) {
+
+        try {
+
+            return URLDecoder.decode(
+                    value,
+                    StandardCharsets.UTF_8
+            );
+
+        } catch (Exception e) {
+
+            return value;
+        }
+    }
+
+
+    private static String urlEncode(
+            String value) {
+
+        try {
+
+            return java.net.URLEncoder.encode(
+                    value,
+                    StandardCharsets.UTF_8
+            );
+
+        } catch (Exception e) {
+
+            return value;
+        }
+    }
+
+
+    private static String readBody(
+            HttpExchange exchange)
+            throws IOException {
+
+        return new String(
+                exchange
+                        .getRequestBody()
+                        .readAllBytes(),
+                StandardCharsets.UTF_8
+        );
+    }
+
 
     private static void redirect(
             HttpExchange exchange,
@@ -2559,7 +3164,10 @@ public class HotelServer {
             throws IOException {
 
         exchange.getResponseHeaders()
-                .set("Location", location);
+                .set(
+                        "Location",
+                        location
+                );
 
         exchange.sendResponseHeaders(
                 302,
@@ -2570,50 +3178,16 @@ public class HotelServer {
     }
 
 
-    // ==========================================
-    // SEND HTML
-    // ==========================================
-
-    private static void sendHtml(
-            HttpExchange exchange,
-            String html)
-            throws IOException {
-
-        byte[] data =
-                html.getBytes(
-                        StandardCharsets.UTF_8);
-
-        exchange.getResponseHeaders()
-                .set(
-                        "Content-Type",
-                        "text/html; charset=UTF-8"
-                );
-
-        exchange.sendResponseHeaders(
-                200,
-                data.length
-        );
-
-        try (OutputStream os =
-                     exchange.getResponseBody()) {
-
-            os.write(data);
-        }
-    }
-
-
-    // ==========================================
-    // SEND JSON
-    // ==========================================
-
     private static void sendJson(
             HttpExchange exchange,
             String json)
             throws IOException {
 
-        byte[] data =
+        byte[] bytes =
                 json.getBytes(
-                        StandardCharsets.UTF_8);
+                        StandardCharsets.UTF_8
+                );
+
 
         exchange.getResponseHeaders()
                 .set(
@@ -2621,107 +3195,403 @@ public class HotelServer {
                         "application/json; charset=UTF-8"
                 );
 
+
         exchange.sendResponseHeaders(
                 200,
-                data.length
+                bytes.length
         );
 
-        try (OutputStream os =
-                     exchange.getResponseBody()) {
 
-            os.write(data);
+        try (
+                OutputStream out =
+                        exchange.getResponseBody()
+        ) {
+
+            out.write(bytes);
         }
     }
 
 
-    // ==========================================
-    // ERROR PAGE
-    // ==========================================
+    private static void sendHtml(
+            HttpExchange exchange,
+            String html)
+            throws IOException {
 
-    private static void sendErrorPage(
+        byte[] bytes =
+                html.getBytes(
+                        StandardCharsets.UTF_8
+                );
+
+
+        exchange.getResponseHeaders()
+                .set(
+                        "Content-Type",
+                        "text/html; charset=UTF-8"
+                );
+
+
+        exchange.sendResponseHeaders(
+                200,
+                bytes.length
+        );
+
+
+        try (
+                OutputStream out =
+                        exchange.getResponseBody()
+        ) {
+
+            out.write(bytes);
+        }
+    }
+
+
+    private static void sendError(
             HttpExchange exchange,
             String message)
             throws IOException {
 
-        String html = """
-                <!DOCTYPE html>
-                <html>
+        sendHtml(
+                exchange,
+                messagePage(
+                        "Request Failed",
+                        message == null
+                                ? "Something went wrong."
+                                : message,
+                        "/bookings.html",
+                        "Back"
+                )
+        );
+    }
 
-                <head>
 
-                    <title>Error</title>
+    private static String messagePage(
+            String title,
+            String message,
+            String link,
+            String linkText) {
 
-                    <link rel="stylesheet"
-                          href="/css/style.css">
+        return
+                "<!DOCTYPE html>" +
 
-                </head>
+                "<html>" +
 
-                <body>
+                "<head>" +
 
-                <div class="message-page">
+                "<meta charset='UTF-8'>" +
 
-                    <div class="message-card">
+                "<title>" +
+                esc(title) +
+                "</title>" +
 
-                        <div class="message-icon">
-                            !
-                        </div>
+                "<link rel='stylesheet' " +
+                "href='/css/style.css'>" +
 
-                        <h1>Something went wrong</h1>
+                "</head>" +
 
-                        <p>%s</p>
+                "<body>" +
 
-                        <a href="/booking.html">
-                            Back to Booking
-                        </a>
+                "<div class='message-page'>" +
 
-                    </div>
+                "<div class='message-card'>" +
 
-                </div>
+                "<div class='message-icon'>!</div>" +
 
-                </body>
+                "<h1>" +
+                esc(title) +
+                "</h1>" +
 
-                </html>
-                """.formatted(
-                        escapeHtml(message)
+                "<p>" +
+                esc(message) +
+                "</p>" +
+
+                "<a class='btn primary' " +
+                "href='" +
+                link +
+                "'>" +
+
+                esc(linkText) +
+
+                "</a>" +
+
+                "</div>" +
+
+                "</div>" +
+
+                "</body>" +
+
+                "</html>";
+    }
+
+
+    private static void serveFile(
+            HttpExchange exchange,
+            String file)
+            throws IOException {
+
+
+        Path path =
+                WEB.resolve(file)
+                        .normalize();
+
+
+        if (
+                !path.startsWith(WEB)
+                        ||
+                !Files.exists(path)
+        ) {
+
+            exchange.sendResponseHeaders(
+                    404,
+                    -1
+            );
+
+            return;
+        }
+
+
+        String contentType =
+                "application/octet-stream";
+
+
+        if (file.endsWith(".html")) {
+
+            contentType =
+                    "text/html";
+
+        } else if (file.endsWith(".css")) {
+
+            contentType =
+                    "text/css";
+        }
+
+
+        byte[] bytes =
+                Files.readAllBytes(path);
+
+
+        exchange.getResponseHeaders()
+                .set(
+                        "Content-Type",
+                        contentType +
+                        "; charset=UTF-8"
                 );
 
-        sendHtml(exchange, html);
+
+        exchange.sendResponseHeaders(
+                200,
+                bytes.length
+        );
+
+
+        try (
+                OutputStream out =
+                        exchange.getResponseBody()
+        ) {
+
+            out.write(bytes);
+        }
     }
 
 
-    // ==========================================
-    // JSON ESCAPE
-    // ==========================================
+    // ==================================================
+    // SIMPLE PDF GENERATOR
+    // ==================================================
 
-    private static String jsonEscape(
-            String text) {
-
-        if (text == null)
-            return "";
-
-        return text
-                .replace("\\", "\\\\")
-                .replace("\"", "\\\"")
-                .replace("\n", "\\n")
-                .replace("\r", "\\r");
-    }
+    private static byte[] simplePdf(
+            List<String> lines)
+            throws IOException {
 
 
-    // ==========================================
-    // HTML ESCAPE
-    // ==========================================
+        List<String> clean =
+                new ArrayList<>();
 
-    private static String escapeHtml(
-            String text) {
 
-        if (text == null)
-            return "";
+        for (
+                String line :
+                lines
+        ) {
 
-        return text
-                .replace("&", "&amp;")
-                .replace("<", "&lt;")
-                .replace(">", "&gt;")
-                .replace("\"", "&quot;")
-                .replace("'", "&#39;");
+            clean.add(
+                    line
+                            .replace(
+                                    "\\",
+                                    "\\\\"
+                            )
+                            .replace(
+                                    "(",
+                                    "\\("
+                            )
+                            .replace(
+                                    ")",
+                                    "\\)"
+                            )
+            );
+        }
+
+
+        StringBuilder stream =
+                new StringBuilder();
+
+
+        stream.append(
+                "BT /F1 16 Tf 50 790 Td "
+        );
+
+
+        for (
+                int i = 0;
+                i < clean.size();
+                i++
+        ) {
+
+            if (i > 0) {
+
+                stream.append(
+                        "0 -28 Td "
+                );
+            }
+
+
+            stream.append("(")
+                    .append(clean.get(i))
+                    .append(") Tj ");
+        }
+
+
+        stream.append(
+                "ET"
+        );
+
+
+        String[] objects = {
+
+                "<< /Type /Catalog " +
+                "/Pages 2 0 R >>",
+
+                "<< /Type /Pages " +
+                "/Kids [3 0 R] " +
+                "/Count 1 >>",
+
+                "<< /Type /Page " +
+                "/Parent 2 0 R " +
+                "/MediaBox [0 0 595 842] " +
+                "/Resources << " +
+                "/Font << " +
+                "/F1 5 0 R >> >> " +
+                "/Contents 4 0 R >>",
+
+                "<< /Length " +
+                stream.length() +
+                " >>\n" +
+
+                "stream\n" +
+                stream +
+                "\nendstream",
+
+                "<< /Type /Font " +
+                "/Subtype /Type1 " +
+                "/BaseFont /Helvetica >>"
+        };
+
+
+        ByteArrayOutputStream out =
+                new ByteArrayOutputStream();
+
+
+        out.write(
+                "%PDF-1.4\n"
+                        .getBytes(
+                                StandardCharsets.US_ASCII
+                        )
+        );
+
+
+        List<Integer> offsets =
+                new ArrayList<>();
+
+
+        offsets.add(0);
+
+
+        for (
+                int i = 0;
+                i < objects.length;
+                i++
+        ) {
+
+            offsets.add(
+                    out.size()
+            );
+
+
+            out.write(
+                    (
+                            (i + 1) +
+                            " 0 obj\n" +
+                            objects[i] +
+                            "\nendobj\n"
+                    ).getBytes(
+                            StandardCharsets.US_ASCII
+                    )
+            );
+        }
+
+
+        int xref =
+                out.size();
+
+
+        out.write(
+                (
+                        "xref\n" +
+                        "0 " +
+                        (objects.length + 1) +
+                        "\n" +
+                        "0000000000 65535 f \n"
+                ).getBytes(
+                        StandardCharsets.US_ASCII
+                )
+        );
+
+
+        for (
+                int i = 1;
+                i < offsets.size();
+                i++
+        ) {
+
+            out.write(
+                    String.format(
+                            Locale.US,
+                            "%010d 00000 n \n",
+                            offsets.get(i)
+                    ).getBytes(
+                            StandardCharsets.US_ASCII
+                    )
+            );
+        }
+
+
+        out.write(
+                (
+                        "trailer\n" +
+
+                        "<< /Size " +
+                        (objects.length + 1) +
+                        " /Root 1 0 R >>\n" +
+
+                        "startxref\n" +
+
+                        xref +
+
+                        "\n%%EOF"
+                ).getBytes(
+                        StandardCharsets.US_ASCII
+                )
+        );
+
+
+        return out.toByteArray();
     }
 }

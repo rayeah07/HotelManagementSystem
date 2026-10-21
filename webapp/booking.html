@@ -6,32 +6,39 @@
     <meta charset="UTF-8">
 
     <meta name="viewport"
-          content="width=device-width, initial-scale=1.0">
+          content="width=device-width, initial-scale=1">
 
-    <title>New Booking | Grand Stay</title>
+    <title>New Booking - Grand Stay</title>
 
     <link rel="stylesheet"
           href="/css/style.css">
 
+    <script>
+
+        if (
+            localStorage.getItem("grandStayTheme")
+            === "dark"
+        ) {
+
+            document.documentElement
+                    .classList.add("dark-mode");
+        }
+
+    </script>
+
 </head>
+
 
 <body>
 
-<div class="app">
+<div class="app-shell">
+
 
     <aside class="sidebar">
 
         <div class="brand">
-
-            <div class="brand-logo">
-                GS
-            </div>
-
-            <div>
-                <strong>Grand Stay</strong>
-                <span>HOTEL</span>
-            </div>
-
+            GRAND STAY
+            <span>HOTEL</span>
         </div>
 
 
@@ -49,46 +56,29 @@
 
             <a class="active"
                href="/booking.html">
-
                 <span>＋</span>
                 New Booking
-
             </a>
 
             <a href="/bookings.html">
-
                 <span>☷</span>
                 Booking History
+            </a>
 
+            <a href="/settings.html">
+                <span>⚙</span>
+                Settings
             </a>
 
         </nav>
-
-
-        <div class="sidebar-bottom">
-
-            <div class="hotel-info">
-
-                <strong>Grand Stay Hotel</strong>
-
-                <small>
-                    8 Floors · 24 Rooms
-                </small>
-
-            </div>
-
-            <a href="/" class="logout">
-                Logout
-            </a>
-
-        </div>
 
     </aside>
 
 
     <main class="main">
 
-        <header class="topbar">
+
+        <div class="topbar">
 
             <div>
 
@@ -96,42 +86,42 @@
                     RESERVATIONS
                 </p>
 
-                <h1>New Booking</h1>
+                <h1>
+                    New Booking
+                </h1>
 
             </div>
 
-        </header>
+
+            <button
+                class="theme-btn"
+                onclick="toggleTheme()">
+
+                ☾
+
+            </button>
+
+        </div>
 
 
-        <div class="booking-layout">
+        <section class="form-layout">
 
 
-            <section class="form-card">
+            <div class="card">
 
-                <div class="card-heading">
+                <p class="eyebrow">
+                    GUEST DETAILS
+                </p>
 
-                    <div>
-
-                        <p class="eyebrow">
-                            GUEST DETAILS
-                        </p>
-
-                        <h2>
-                            Create Reservation
-                        </h2>
-
-                    </div>
-
-                    <div class="form-number">
-                        01
-                    </div>
-
-                </div>
+                <h2>
+                    Create reservation
+                </h2>
 
 
-                <form action="/book"
-                      method="POST"
-                      id="bookingForm">
+                <form
+                    method="POST"
+                    action="/book"
+                    class="main-form">
 
 
                     <label>
@@ -141,7 +131,7 @@
                     <input
                         type="text"
                         name="name"
-                        placeholder="Enter guest full name"
+                        placeholder="Enter guest name"
                         required>
 
 
@@ -150,19 +140,20 @@
                     </label>
 
                     <input
-                        type="tel"
+                        type="text"
                         name="phone"
                         placeholder="Enter phone number"
                         required>
 
 
                     <label>
-                        Select Room
+                        Room
                     </label>
 
-                    <select name="room"
-                            id="roomSelect"
-                            required>
+                    <select
+                        name="roomNumber"
+                        id="roomNumber"
+                        required>
 
                         <option value="">
                             Loading available rooms...
@@ -172,7 +163,7 @@
 
 
                     <label>
-                        Number of Days
+                        Number of Nights
                     </label>
 
                     <input
@@ -184,57 +175,45 @@
                         required>
 
 
-                    <div class="booking-total">
+                    <div class="booking-preview">
 
                         <span>
-                            Estimated Total
+                            Estimated room total
                         </span>
 
-                        <strong id="total">
-                            ₹0
+                        <strong id="previewTotal">
+                            ₹0.00
                         </strong>
 
                     </div>
 
 
-                    <button type="submit"
-                            class="primary-btn">
+                    <button
+                        type="submit"
+                        class="btn primary full">
 
                         Confirm Booking
 
                     </button>
 
+
                 </form>
 
-            </section>
+            </div>
 
 
-            <aside class="booking-info">
+            <div class="card booking-info">
 
-                <div class="info-card">
+                <p class="eyebrow">
+                    ROOM INFORMATION
+                </p>
 
-                    <div class="info-icon">
-                        ★
-                    </div>
-
-                    <h3>
-                        Grand Stay
-                    </h3>
-
-                    <p>
-                        Experience comfort,
-                        convenience and premium
-                        hospitality.
-                    </p>
-
-                </div>
+                <h2>
+                    Current rates
+                </h2>
 
 
-                <div class="pricing-card">
-
-                    <h3>
-                        Room Pricing
-                    </h3>
+                <div class="price-info">
 
                     <div>
 
@@ -243,10 +222,15 @@
                         </span>
 
                         <strong>
-                            ₹1,500/night
+                            ₹1,500
                         </strong>
 
+                        <small>
+                            per night
+                        </small>
+
                     </div>
+
 
                     <div>
 
@@ -255,16 +239,36 @@
                         </span>
 
                         <strong>
-                            ₹4,000/night
+                            ₹4,000
                         </strong>
+
+                        <small>
+                            per night
+                        </small>
 
                     </div>
 
                 </div>
 
-            </aside>
 
-        </div>
+                <div class="info-note">
+
+                    <strong>
+                        24 rooms
+                    </strong>
+
+                    <p>
+                        The hotel has 8 floors
+                        with 3 rooms on each floor.
+                    </p>
+
+                </div>
+
+            </div>
+
+
+        </section>
+
 
     </main>
 
@@ -273,14 +277,29 @@
 
 <script>
 
-let selectedPrice = 0;
+function toggleTheme() {
+
+    const dark =
+        document.documentElement
+                .classList.toggle(
+                    "dark-mode"
+                );
+
+    localStorage.setItem(
+        "grandStayTheme",
+        dark ? "dark" : "light"
+    );
+}
+
+
+let rooms = [];
 
 
 async function loadRooms() {
 
     const select =
         document.getElementById(
-            "roomSelect"
+            "roomNumber"
         );
 
 
@@ -288,108 +307,77 @@ async function loadRooms() {
 
         const response =
             await fetch(
-                "/available-rooms"
+                "/available-rooms?x=" +
+                Date.now()
             );
 
-        const rooms =
+
+        rooms =
             await response.json();
 
 
         select.innerHTML =
-            `<option value="">
-                Select an available room
-             </option>`;
+            '<option value="">Select a room</option>';
 
 
-        rooms.forEach(room => {
+        rooms.forEach(
+            room => {
 
-            const option =
-                document.createElement(
-                    "option"
+                const option =
+                    document.createElement(
+                        "option"
+                    );
+
+
+                option.value =
+                    room.roomNumber;
+
+
+                option.dataset.price =
+                    room.price;
+
+
+                option.textContent =
+                    "Room " +
+                    room.roomNumber +
+                    " · " +
+                    room.roomType +
+                    " · ₹" +
+                    Number(
+                        room.price
+                    ).toLocaleString(
+                        "en-IN"
+                    ) +
+                    "/night";
+
+
+                select.appendChild(
+                    option
                 );
+            }
+        );
 
 
-            option.value =
-                room.roomNumber;
+        updateTotal();
 
 
-            option.dataset.price =
-                room.price;
-
-
-            option.textContent =
-                `Room ${room.roomNumber}
-                 — ${room.type}
-                 — ₹${Number(
-                     room.price
-                 ).toLocaleString("en-IN")}/night`;
-
-
-            select.appendChild(
-                option
-            );
-
-        });
-
-
-        const urlParams =
-            new URLSearchParams(
-                window.location.search
-            );
-
-        const requestedRoom =
-            urlParams.get("room");
-
-
-        if (requestedRoom) {
-
-            select.value =
-                requestedRoom;
-
-            updatePrice();
-
-        }
-
-    }
-
-    catch (error) {
+    } catch (error) {
 
         select.innerHTML =
-            `<option>
-                Unable to load rooms
-             </option>`;
+            '<option value="">Unable to load rooms</option>';
 
+        console.error(error);
     }
-
-}
-
-
-function updatePrice() {
-
-    const select =
-        document.getElementById(
-            "roomSelect"
-        );
-
-
-    const option =
-        select.options[
-            select.selectedIndex
-        ];
-
-
-    selectedPrice =
-        Number(
-            option?.dataset?.price || 0
-        );
-
-
-    updateTotal();
-
 }
 
 
 function updateTotal() {
+
+    const select =
+        document.getElementById(
+            "roomNumber"
+        );
+
 
     const days =
         Number(
@@ -399,26 +387,41 @@ function updateTotal() {
         );
 
 
+    const option =
+        select.options[
+            select.selectedIndex
+        ];
+
+
+    const price =
+        Number(
+            option?.dataset?.price || 0
+        );
+
+
     const total =
-        selectedPrice * days;
+        price * days;
 
 
     document.getElementById(
-        "total"
+        "previewTotal"
     ).textContent =
+
         "₹" +
         total.toLocaleString(
-            "en-IN"
+            "en-IN",
+            {
+                minimumFractionDigits: 2
+            }
         );
-
 }
 
 
 document.getElementById(
-    "roomSelect"
+    "roomNumber"
 ).addEventListener(
     "change",
-    updatePrice
+    updateTotal
 );
 
 
@@ -435,4 +438,5 @@ loadRooms();
 </script>
 
 </body>
+
 </html>

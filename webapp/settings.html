@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1">
+
+    <title>Settings - Grand Stay</title>
+
+    <link rel="stylesheet"
+          href="/css/style.css">
+
+    <script>
+
+        if (
+            localStorage.getItem("grandStayTheme")
+            === "dark"
+        ) {
+
+            document.documentElement
+                    .classList.add("dark-mode");
+        }
+
+    </script>
+
+</head>
+
+
+<body>
+
+<div class="app-shell">
+
+
+    <aside class="sidebar">
+
+        <div class="brand">
+            GRAND STAY
+            <span>HOTEL</span>
+        </div>
+
+
+        <nav>
+
+            <a href="/dashboard.html">
+                <span>⌂</span>
+                Dashboard
+            </a>
+
+            <a href="/rooms.html">
+                <span>▦</span>
+                Rooms
+            </a>
+
+            <a href="/booking.html">
+                <span>＋</span>
+                New Booking
+            </a>
+
+            <a href="/bookings.html">
+                <span>☷</span>
+                Booking History
+            </a>
+
+            <a class="active"
+               href="/settings.html">
+                <span>⚙</span>
+                Settings
+            </a>
+
+        </nav>
+
+    </aside>
+
+
+    <main class="main">
+
+
+        <div class="topbar">
+
+            <div>
+
+                <p class="eyebrow">
+                    ADMINISTRATION
+                </p>
+
+                <h1>
+                    Settings
+                </h1>
+
+            </div>
+
+
+            <button
+                class="theme-btn"
+                onclick="toggleTheme()">
+
+                ☾
+
+            </button>
+
+        </div>
+
+
+        <div id="message"></div>
+
+
+        <section class="settings-grid">
+
+
+            <div class="card">
+
+                <p class="eyebrow">
+                    HOTEL FLOORS
+                </p>
+
+                <h2>
+                    Manage floors
+                </h2>
+
+                <p class="muted">
+                    Each new floor contains
+                    two Single rooms and
+                    one Deluxe room.
+                </p>
+
+
+                <button
+                    class="btn primary"
+                    onclick="addFloor()">
+
+                    ＋ Add New Floor
+
+                </button>
+
+
+                <div
+                    id="floorList"
+                    class="floor-list">
+
+                    Loading...
+
+                </div>
+
+            </div>
+
+
+            <div class="card">
+
+                <p class="eyebrow">
+                    SYSTEM
+                </p>
+
+                <h2>
+                    Grand Stay
+                </h2>
+
+
+                <div class="settings-info">
+
+                    <div>
+
+                        <span>
+                            Current rooms
+                        </span>
+
+                        <strong id="roomCount">
+                            -
+                        </strong>
+
+                    </div>
+
+
+                    <div>
+
+                        <span>
+                            Current floors
+                        </span>
+
+                        <strong id="floorCount">
+                            -
+                        </strong>
+
+                    </div>
+
+
+                    <div>
+
+                        <span>
+                            Single room
+                        </span>
+
+                        <strong>
+                            ₹1,500
+                        </strong>
+
+                    </div>
+
+
+                    <div>
+
+                        <span>
+                            Deluxe room
+                        </span>
+
+                        <strong>
+                            ₹4,000
+                        </strong>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+        </section>
+
+
+    </main>
+
+</div>
+
+
+<script>
+
+function toggleTheme() {
+
+    const dark =
+        document.documentElement
+                .classList.toggle(
+                    "dark-mode"
+                );
+
+    localStorage.setItem(
+        "grandStayTheme",
+        dark ? "dark" : "light"
+    );
+}
+
+
+function showMessage(
+    text,
+    success
+) {
+
+    document.getElementById(
+        "message"
+    ).innerHTML =
+
+        '<div class="message ' +
+        (
+            success
+                ? "success-message"
+                : "error-message"
+        ) +
+        '">' +
+
+        text +
+
+        '</div>';
+}
+
+
+async function loadFloors() {
+
+    try {
+
+        const response =
+            await fetch(
+                "/all-rooms?x=" +
+                Date.now()
+            );
+
+
+        const rooms =
+            await response.json();
+
+
+        const floors = {};
+
+
+        rooms.forEach(
+            room => {
+
+                if (!floors[room.floor]) {
+
+                    floors[room.floor] =
+                        [];
+                }
+
+
+                floors[room.floor]
+                    .push(room);
+            }
+        );
+
+
+        document.getElementById(
+            "roomCount"
+        ).textContent =
+            rooms.length;
+
+
+        document.getElementById(
+            "floorCount"
+        ).textContent =
+            Object.keys(floors).length;
+
+
+        let html = "";
+
+
+        Object.keys(floors)
+            .sort(
+                (a,b) =>
+                    Number(a) -
+                    Number(b)
+            )
+            .forEach(
+                floor => {
+
+                    html +=
+
+                        '<div class="floor-row">' +
+
+                        '<div>' +
+
+                        '<strong>' +
+                        'Floor ' +
+                        floor +
+                        '</strong>' +
+
+                        '<small>' +
+                        floors[floor]
+                            .map(
+                                r =>
+                                    r.roomNumber
+                            )
+                            .join(", ") +
+
+                        '</small>' +
+
+                        '</div>' +
+
+                        '<button ' +
+                        'class="btn danger" ' +
+                        'onclick="deleteFloor(' +
+                        floor +
+                        ')">' +
+
+                        'Delete' +
+
+                        '</button>' +
+
+                        '</div>';
+                }
+            );
+
+
+        document.getElementById(
+            "floorList"
+        ).innerHTML =
+            html;
+
+
+    } catch (error) {
+
+        document.getElementById(
+            "floorList"
+        ).innerHTML =
+            '<div class="empty">' +
+            'Unable to load floors.' +
+            '</div>';
+    }
+}
+
+
+async function addFloor() {
+
+    if (
+        !confirm(
+            "Add a new floor with 3 rooms?"
+        )
+    ) {
+
+        return;
+    }
+
+
+    try {
+
+        const response =
+            await fetch(
+                "/add-floor",
+                {
+                    method: "POST"
+                }
+            );
+
+
+        const data =
+            await response.json();
+
+
+        if (!data.success) {
+
+            throw new Error(
+                data.message
+                    || "Could not add floor."
+            );
+        }
+
+
+        showMessage(
+            "Floor " +
+            data.floor +
+            " added successfully.",
+            true
+        );
+
+
+        loadFloors();
+
+
+    } catch (error) {
+
+        showMessage(
+            error.message,
+            false
+        );
+    }
+}
+
+
+async function deleteFloor(floor) {
+
+    if (
+        !confirm(
+            "Delete Floor " +
+            floor +
+            "? Historical bookings on this floor will also be removed."
+        )
+    ) {
+
+        return;
+    }
+
+
+    try {
+
+        const body =
+            new URLSearchParams();
+
+
+        body.append(
+            "floor",
+            floor
+        );
+
+
+        const response =
+            await fetch(
+                "/delete-floor",
+                {
+                    method: "POST",
+
+                    headers: {
+                        "Content-Type":
+                            "application/x-www-form-urlencoded"
+                    },
+
+                    body: body.toString()
+                }
+            );
+
+
+        const data =
+            await response.json();
+
+
+        if (!data.success) {
+
+            throw new Error(
+                data.message
+                    || "Could not delete floor."
+            );
+        }
+
+
+        showMessage(
+            "Floor " +
+            floor +
+            " deleted successfully.",
+            true
+        );
+
+
+        loadFloors();
+
+
+    } catch (error) {
+
+        showMessage(
+            error.message,
+            false
+        );
+    }
+}
+
+
+loadFloors();
+
+</script>
+
+</body>
+
+</html>

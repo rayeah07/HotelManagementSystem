@@ -6,32 +6,39 @@
     <meta charset="UTF-8">
 
     <meta name="viewport"
-          content="width=device-width, initial-scale=1.0">
+          content="width=device-width, initial-scale=1">
 
-    <title>Rooms | Grand Stay</title>
+    <title>Rooms - Grand Stay</title>
 
     <link rel="stylesheet"
           href="/css/style.css">
 
+    <script>
+
+        if (
+            localStorage.getItem("grandStayTheme")
+            === "dark"
+        ) {
+
+            document.documentElement
+                    .classList.add("dark-mode");
+        }
+
+    </script>
+
 </head>
+
 
 <body>
 
-<div class="app">
+<div class="app-shell">
+
 
     <aside class="sidebar">
 
         <div class="brand">
-
-            <div class="brand-logo">
-                GS
-            </div>
-
-            <div>
-                <strong>Grand Stay</strong>
-                <span>HOTEL</span>
-            </div>
-
+            GRAND STAY
+            <span>HOTEL</span>
         </div>
 
 
@@ -44,121 +51,85 @@
 
             <a class="active"
                href="/rooms.html">
-
                 <span>▦</span>
                 Rooms
-
             </a>
 
             <a href="/booking.html">
-
                 <span>＋</span>
                 New Booking
-
             </a>
 
             <a href="/bookings.html">
-
                 <span>☷</span>
                 Booking History
+            </a>
 
+            <a href="/settings.html">
+                <span>⚙</span>
+                Settings
             </a>
 
         </nav>
-
-
-        <div class="sidebar-bottom">
-
-            <div class="hotel-info">
-
-                <strong>Grand Stay Hotel</strong>
-
-                <small>
-                    8 Floors · 24 Rooms
-                </small>
-
-            </div>
-
-            <a href="/" class="logout">
-                Logout
-            </a>
-
-        </div>
 
     </aside>
 
 
     <main class="main">
 
-        <header class="topbar">
+
+        <div class="topbar">
 
             <div>
 
                 <p class="eyebrow">
-                    HOTEL MANAGEMENT
+                    HOTEL INVENTORY
                 </p>
 
-                <h1>Rooms</h1>
+                <h1>
+                    Rooms
+                </h1>
 
             </div>
 
-            <a href="/booking.html"
-               class="top-button">
 
-                + New Booking
+            <button
+                class="theme-btn"
+                onclick="toggleTheme()">
 
-            </a>
+                ☾
 
-        </header>
+            </button>
+
+        </div>
 
 
         <div class="room-summary">
 
             <div>
-                <strong>24</strong>
-                <span>Total Rooms</span>
+                <span>Total</span>
+                <strong id="total">0</strong>
             </div>
 
             <div>
-                <strong>8</strong>
-                <span>Floors</span>
+                <span>Available</span>
+                <strong id="available">0</strong>
             </div>
 
             <div>
-                <strong>16</strong>
-                <span>Single Rooms</span>
+                <span>Occupied</span>
+                <strong id="occupied">0</strong>
             </div>
-
-            <div>
-                <strong>8</strong>
-                <span>Deluxe Rooms</span>
-            </div>
-
-        </div>
-
-
-        <div class="legend">
-
-            <span>
-                <i class="dot available-dot"></i>
-                Available
-            </span>
-
-            <span>
-                <i class="dot booked-dot"></i>
-                Booked
-            </span>
 
         </div>
 
 
         <div id="roomsContainer">
 
-            <div class="loading">
-                Loading rooms...
-            </div>
+            Loading rooms...
 
         </div>
+
 
     </main>
 
@@ -167,185 +138,213 @@
 
 <script>
 
+function toggleTheme() {
+
+    const dark =
+        document.documentElement
+                .classList.toggle(
+                    "dark-mode"
+                );
+
+    localStorage.setItem(
+        "grandStayTheme",
+        dark ? "dark" : "light"
+    );
+}
+
+
+function money(value) {
+
+    return "₹" +
+        Number(value || 0)
+            .toLocaleString(
+                "en-IN",
+                {
+                    minimumFractionDigits: 2
+                }
+            );
+}
+
+
 async function loadRooms() {
 
     try {
 
         const response =
-            await fetch("/all-rooms");
+            await fetch(
+                "/all-rooms?x=" +
+                Date.now()
+            );
+
 
         const rooms =
             await response.json();
 
 
-        const container =
-            document.getElementById(
-                "roomsContainer"
+        if (!Array.isArray(rooms)) {
+
+            throw new Error(
+                "Unable to load rooms."
             );
-
-        container.innerHTML = "";
-
-
-        for (let floor = 1;
-             floor <= 8;
-             floor++) {
-
-
-            const floorRooms =
-                rooms.filter(
-                    room =>
-                        room.floor === floor
-                );
-
-
-            const section =
-                document.createElement(
-                    "section"
-                );
-
-            section.className =
-                "floor-section";
-
-
-            section.innerHTML = `
-
-                <div class="floor-title">
-
-                    <div>
-
-                        <span>
-                            FLOOR ${floor}
-                        </span>
-
-                        <h2>
-                            ${floor === 1
-                                ? "Ground Floor"
-                                : "Floor " + floor}
-                        </h2>
-
-                    </div>
-
-                    <small>
-                        ${floorRooms.length}
-                        Rooms
-                    </small>
-
-                </div>
-
-                <div class="room-grid"
-                     id="floor-${floor}">
-                </div>
-
-            `;
-
-
-            container.appendChild(section);
-
-
-            const grid =
-                section.querySelector(
-                    ".room-grid"
-                );
-
-
-            floorRooms.forEach(room => {
-
-                const card =
-                    document.createElement(
-                        "div"
-                    );
-
-                card.className =
-                    "room-card " +
-                    (room.available
-                        ? "available-room"
-                        : "booked-room");
-
-
-                card.innerHTML = `
-
-                    <div class="room-card-top">
-
-                        <div class="large-room-number">
-                            ${room.roomNumber}
-                        </div>
-
-                        <span class="status-pill
-                            ${room.available
-                                ? "available"
-                                : "booked"}">
-
-                            ${room.available
-                                ? "Available"
-                                : "Booked"}
-
-                        </span>
-
-                    </div>
-
-
-                    <div class="room-card-body">
-
-                        <h3>
-                            ${room.type} Room
-                        </h3>
-
-                        <p>
-                            ${room.type === "Single"
-                                ? "Comfortable room for one guest"
-                                : "Premium room with extra comfort"}
-                        </p>
-
-                        <strong>
-                            ₹${Number(
-                                room.price
-                            ).toLocaleString("en-IN")}
-                            <small>/ night</small>
-                        </strong>
-
-                    </div>
-
-
-                    ${
-                        room.available
-                        ?
-
-                        `<a class="room-book-btn"
-                           href="/booking.html?room=${room.roomNumber}">
-                            Book This Room →
-                         </a>`
-
-                        :
-
-                        `<div class="room-booked-label">
-                            Currently Occupied
-                         </div>`
-                    }
-
-                `;
-
-
-                grid.appendChild(card);
-
-            });
-
         }
 
-    }
 
-    catch (error) {
+        const available =
+            rooms.filter(
+                room =>
+                    room.available
+            ).length;
 
-        console.error(error);
+
+        document.getElementById(
+            "total"
+        ).textContent =
+            rooms.length;
+
+
+        document.getElementById(
+            "available"
+        ).textContent =
+            available;
+
+
+        document.getElementById(
+            "occupied"
+        ).textContent =
+            rooms.length -
+            available;
+
+
+        const floors = {};
+
+
+        rooms.forEach(
+            room => {
+
+                if (!floors[room.floor]) {
+
+                    floors[room.floor] =
+                        [];
+                }
+
+
+                floors[room.floor]
+                    .push(room);
+            }
+        );
+
+
+        let html = "";
+
+
+        Object.keys(floors)
+            .sort(
+                (a,b) =>
+                    Number(a) -
+                    Number(b)
+            )
+            .forEach(
+                floor => {
+
+                    html +=
+
+                        '<section class="floor-section">' +
+
+                        '<div class="floor-heading">' +
+
+                        '<div>' +
+
+                        '<p class="eyebrow">' +
+                        'FLOOR' +
+                        '</p>' +
+
+                        '<h2>' +
+                        floor +
+                        '</h2>' +
+
+                        '</div>' +
+
+                        '<span>' +
+                        floors[floor].length +
+                        ' rooms' +
+                        '</span>' +
+
+                        '</div>' +
+
+                        '<div class="room-grid">';
+
+
+                    floors[floor]
+                        .forEach(
+                            room => {
+
+                                html +=
+
+                                    '<div class="room-card ' +
+                                    (
+                                        room.available
+                                            ? "available"
+                                            : "occupied"
+                                    ) +
+                                    '">' +
+
+                                    '<div class="room-number">' +
+
+                                    room.roomNumber +
+
+                                    '</div>' +
+
+                                    '<div>' +
+
+                                    '<h3>' +
+                                    room.roomType +
+                                    '</h3>' +
+
+                                    '<p>' +
+                                    money(room.price) +
+                                    ' / night</p>' +
+
+                                    '</div>' +
+
+                                    '<span class="room-status">' +
+
+                                    (
+                                        room.available
+                                            ? "Available"
+                                            : "Occupied"
+                                    ) +
+
+                                    '</span>' +
+
+                                    '</div>';
+                            }
+                        );
+
+
+                    html +=
+                        '</div></section>';
+                }
+            );
+
 
         document.getElementById(
             "roomsContainer"
         ).innerHTML =
-            `<div class="error">
-                Unable to load rooms.
-             </div>`;
+            html;
 
+
+    } catch (error) {
+
+        document.getElementById(
+            "roomsContainer"
+        ).innerHTML =
+
+            '<div class="empty">' +
+            'Unable to load rooms.' +
+            '</div>';
+
+        console.error(error);
     }
-
 }
 
 
@@ -353,10 +352,11 @@ loadRooms();
 
 setInterval(
     loadRooms,
-    10000
+    5000
 );
 
 </script>
 
 </body>
+
 </html>

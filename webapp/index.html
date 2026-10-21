@@ -6,46 +6,107 @@
     <meta charset="UTF-8">
 
     <meta name="viewport"
-          content="width=device-width, initial-scale=1.0">
+          content="width=device-width, initial-scale=1">
 
     <title>Grand Stay Hotel</title>
 
     <link rel="stylesheet"
           href="/css/style.css">
 
+    <script>
+
+        if (
+            localStorage.getItem("grandStayTheme")
+            === "dark"
+        ) {
+
+            document.documentElement
+                    .classList.add("dark-mode");
+        }
+
+    </script>
+
 </head>
 
-<body class="login-body">
 
-<div class="login-wrapper">
+<body class="login-page">
 
-    <div class="login-brand">
+<div class="login-image">
 
-        <div class="hotel-logo">
-            GS
+    <div class="login-overlay">
+
+        <div class="login-brand">
+
+            <div class="big-logo">
+                GS
+            </div>
+
+            <div>
+
+                <h1>
+                    GRAND STAY
+                </h1>
+
+                <span>
+                    HOTEL MANAGEMENT
+                </span>
+
+            </div>
+
         </div>
 
-        <h1>Grand Stay</h1>
 
-        <p>
-            Hotel Management System
-        </p>
+        <div class="login-caption">
+
+            <p class="eyebrow">
+                WELCOME
+            </p>
+
+            <h2>
+                Manage your hotel
+                with confidence.
+            </h2>
+
+            <p>
+                A simple and elegant hotel
+                management system for rooms,
+                bookings and guest services.
+            </p>
+
+        </div>
 
     </div>
 
+</div>
+
+
+<div class="login-panel">
 
     <div class="login-card">
 
-        <h2>Welcome Back</h2>
+        <div class="mobile-logo">
+            GS
+        </div>
 
-        <p class="login-subtitle">
-            Sign in to manage your hotel
+        <p class="eyebrow">
+            ADMIN PORTAL
         </p>
 
-        <form action="/login"
-              method="POST">
+        <h2>
+            Welcome back
+        </h2>
 
-            <label>Username</label>
+        <p class="login-subtitle">
+            Sign in to continue to Grand Stay.
+        </p>
+
+
+        <form method="POST"
+              action="/login">
+
+            <label>
+                Username
+            </label>
 
             <input
                 type="text"
@@ -54,7 +115,9 @@
                 required>
 
 
-            <label>Password</label>
+            <label>
+                Password
+            </label>
 
             <input
                 type="password"
@@ -63,8 +126,9 @@
                 required>
 
 
-            <button type="submit"
-                    class="primary-btn">
+            <button
+                type="submit"
+                class="btn primary full">
 
                 Sign In
 
@@ -72,8 +136,9 @@
 
         </form>
 
-        <p class="login-note">
-            Hotel Staff Portal
+
+        <p class="login-hint">
+            Administrator access
         </p>
 
     </div>
@@ -81,4 +146,5 @@
 </div>
 
 </body>
+
 </html>
