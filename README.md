@@ -320,6 +320,10 @@ Through this project, I gained practical experience in:
 
 \*\*Rhea Castelino\*\*
 
+\*\*Arlin Castelino\*\*
+
+\*\*Reha Salvi\*\*
+
 
 
 Academic Mini Project – Hotel Management System
