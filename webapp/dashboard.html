@@ -1,617 +1,950 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard | Grand Stay</title>
+    <link rel="stylesheet" href="/css/style.css">
 
-    <meta name="viewport"
-          content="width=device-width, initial-scale=1">
-
-    <title>Dashboard - Grand Stay</title>
-
-    <link rel="stylesheet"
-          href="/css/style.css">
-
-    <script>
-
-        if (
-            localStorage.getItem("grandStayTheme")
-            === "dark"
-        ) {
-
-            document.documentElement
-                    .classList.add("dark-mode");
+    <style>
+        .dashboard-page {
+            max-width: 1450px;
+            margin: auto;
+            padding: 25px 28px 40px;
         }
 
-    </script>
+        .dashboard-heading {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 23px;
+        }
 
+        .dashboard-heading h1 {
+            margin: 0 0 6px;
+        }
+
+        .dashboard-heading p {
+            margin: 0;
+            color: var(--muted);
+        }
+
+        .online-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 9px;
+            padding: 10px 14px;
+            border: 1px solid var(--border);
+            border-radius: 30px;
+            background: var(--surface);
+            color: var(--text);
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .online-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #35a66e;
+            box-shadow: 0 0 0 4px rgba(53, 166, 110, .13);
+        }
+
+        .welcome {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 25px;
+            min-height: 205px;
+            overflow: hidden;
+            padding: 30px;
+            margin-bottom: 23px;
+            border-radius: 18px;
+            background:
+                linear-gradient(105deg,
+                    rgba(13, 31, 27, .96),
+                    rgba(24, 54, 43, .86)),
+                url("https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?auto=format&fit=crop&w=1500&q=85")
+                center 52% / cover;
+            color: #fff;
+            box-shadow: var(--shadow);
+        }
+
+        .welcome-content {
+            position: relative;
+            z-index: 1;
+            max-width: 610px;
+        }
+
+        .welcome .eyebrow {
+            color: #a8d9b8;
+        }
+
+        .welcome h2 {
+            margin: 9px 0;
+            font-size: clamp(25px, 3vw, 36px);
+            line-height: 1.2;
+        }
+
+        .welcome p:not(.eyebrow) {
+            max-width: 520px;
+            color: rgba(255, 255, 255, .78);
+            line-height: 1.7;
+            margin-bottom: 20px;
+        }
+
+        .welcome-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .welcome-actions a {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 11px 15px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-size: 12px;
+            font-weight: 800;
+        }
+
+        .welcome-primary {
+            background: #8bc9a0;
+            color: #14251c;
+        }
+
+        .welcome-secondary {
+            color: white;
+            border: 1px solid rgba(255, 255, 255, .4);
+            background: rgba(255, 255, 255, .08);
+        }
+
+        .welcome-mark {
+            position: relative;
+            z-index: 1;
+            display: grid;
+            place-items: center;
+            width: 105px;
+            height: 105px;
+            border: 1px solid rgba(255, 255, 255, .25);
+            border-radius: 50%;
+            background: rgba(255, 255, 255, .08);
+            color: #b6e2c3;
+            font-size: 48px;
+            flex-shrink: 0;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(5, minmax(0, 1fr));
+            gap: 14px;
+            margin-bottom: 29px;
+        }
+
+        .stat-card {
+            display: flex;
+            align-items: center;
+            gap: 13px;
+            min-width: 0;
+            padding: 18px 15px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 13px;
+            box-shadow: var(--shadow);
+        }
+
+        .stat-icon {
+            display: grid;
+            place-items: center;
+            width: 42px;
+            height: 42px;
+            flex-shrink: 0;
+            border-radius: 11px;
+            background: var(--surface2);
+            color: var(--primary);
+            font-size: 19px;
+            font-weight: 800;
+        }
+
+        .stat-card span {
+            display: block;
+            color: var(--muted);
+            font-size: 11px;
+            margin-bottom: 6px;
+        }
+
+        .stat-card strong {
+            display: block;
+            font-size: 22px;
+            overflow-wrap: anywhere;
+        }
+
+        .stat-card.available .stat-icon {
+            color: #35a66e;
+            background: rgba(53, 166, 110, .12);
+        }
+
+        .stat-card.booked .stat-icon {
+            color: #d18c48;
+            background: rgba(209, 140, 72, .13);
+        }
+
+        .stat-card.revenue .stat-icon {
+            color: #4f8dcc;
+            background: rgba(79, 141, 204, .13);
+        }
+
+        .dashboard-section {
+            margin-bottom: 28px;
+        }
+
+        .section-heading {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .section-heading h2 {
+            margin: 4px 0 0;
+            font-size: 20px;
+        }
+
+        .view-link {
+            color: var(--primary);
+            font-size: 12px;
+            font-weight: 800;
+            text-decoration: none;
+        }
+
+        .action-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 14px;
+        }
+
+        .action-card {
+            display: flex;
+            align-items: center;
+            gap: 13px;
+            padding: 18px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 13px;
+            color: var(--text);
+            text-decoration: none;
+            box-shadow: var(--shadow);
+            transition: transform .2s ease, border-color .2s ease;
+        }
+
+        .action-card:hover {
+            transform: translateY(-3px);
+            border-color: var(--primary);
+        }
+
+        .action-icon {
+            display: grid;
+            place-items: center;
+            width: 43px;
+            height: 43px;
+            flex-shrink: 0;
+            border-radius: 11px;
+            background: var(--surface2);
+            color: var(--primary);
+            font-size: 20px;
+        }
+
+        .action-card h3 {
+            margin: 0 0 5px;
+            font-size: 14px;
+        }
+
+        .action-card p {
+            margin: 0;
+            color: var(--muted);
+            font-size: 11px;
+        }
+
+        .action-arrow {
+            margin-left: auto;
+            color: var(--muted);
+            font-size: 19px;
+        }
+
+        .mini-room-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 11px;
+        }
+
+        .mini-room {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 13px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-left: 3px solid #35a66e;
+            border-radius: 10px;
+            min-width: 0;
+        }
+
+        .mini-room.room-booked {
+            border-left-color: #d18c48;
+        }
+
+        .mini-room-number {
+            display: grid;
+            place-items: center;
+            width: 39px;
+            height: 39px;
+            flex-shrink: 0;
+            border-radius: 9px;
+            background: var(--surface2);
+            font-weight: 800;
+            font-size: 13px;
+        }
+
+        .mini-room-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .mini-room-info strong,
+        .mini-room-info small {
+            display: block;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .mini-room-info strong {
+            font-size: 12px;
+        }
+
+        .mini-room-info small {
+            margin-top: 4px;
+            color: var(--muted);
+            font-size: 10px;
+        }
+
+        .mini-room-status {
+            width: 7px;
+            height: 7px;
+            flex-shrink: 0;
+            border-radius: 50%;
+            background: #35a66e;
+        }
+
+        .room-booked .mini-room-status {
+            background: #d18c48;
+        }
+
+        .table-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 13px;
+            overflow: hidden;
+            box-shadow: var(--shadow);
+        }
+
+        .table-scroll {
+            width: 100%;
+            overflow-x: auto;
+        }
+
+        .recent-table {
+            width: 100%;
+            min-width: 570px;
+            border-collapse: collapse;
+        }
+
+        .recent-table th,
+        .recent-table td {
+            padding: 14px 17px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+            font-size: 12px;
+        }
+
+        .recent-table th {
+            background: var(--surface2);
+            color: var(--muted);
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: .05em;
+        }
+
+        .recent-table tbody tr:last-child td {
+            border-bottom: 0;
+        }
+
+        .recent-table tbody tr:hover {
+            background: var(--surface2);
+        }
+
+        .loading,
+        .empty-state,
+        .error-state {
+            padding: 30px 15px;
+            text-align: center;
+            color: var(--muted);
+        }
+
+        .error-state {
+            color: #c0392b;
+        }
+
+        .theme-btn {
+            position: fixed;
+            right: 22px;
+            bottom: 22px;
+            z-index: 90;
+            padding: 11px 15px;
+            border: 1px solid var(--border);
+            border-radius: 30px;
+            background: var(--surface);
+            color: var(--text);
+            box-shadow: var(--shadow);
+            cursor: pointer;
+            font-weight: 700;
+        }
+
+        @media (max-width: 1150px) {
+            .stats-grid {
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+            }
+
+            .mini-room-grid {
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+            }
+        }
+
+        @media (max-width: 800px) {
+            .action-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .mini-room-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+
+        @media (max-width: 600px) {
+            .dashboard-page {
+                padding: 20px 14px 35px;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            .stat-card {
+                padding: 14px 11px;
+                gap: 9px;
+            }
+
+            .stat-icon {
+                width: 35px;
+                height: 35px;
+            }
+
+            .stat-card strong {
+                font-size: 19px;
+            }
+
+            .welcome {
+                padding: 23px 19px;
+            }
+
+            .welcome-mark {
+                display: none;
+            }
+
+            .mini-room-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
 </head>
 
-
 <body>
-
-<div class="app-shell">
-
+<div class="app">
 
     <aside class="sidebar">
-
         <div class="brand">
-            GRAND STAY
-            <span>HOTEL</span>
+            <div class="brand-logo">GS</div>
+            <div>
+                <strong>Grand Stay</strong>
+                <span>HOTEL</span>
+            </div>
         </div>
-
 
         <nav>
-
-            <a class="active"
-               href="/dashboard.html">
-
-                <span>⌂</span>
-                Dashboard
-
+            <a class="active" href="/dashboard.html">
+                <span>⌂</span> Dashboard
             </a>
-
 
             <a href="/rooms.html">
-
-                <span>▦</span>
-                Rooms
-
+                <span>▦</span> Rooms
             </a>
-
 
             <a href="/booking.html">
-
-                <span>＋</span>
-                New Booking
-
+                <span>＋</span> New Booking
             </a>
-
 
             <a href="/bookings.html">
-
-                <span>☷</span>
-                Booking History
-
+                <span>☷</span> Booking History
             </a>
-
 
             <a href="/settings.html">
-
-                <span>⚙</span>
-                Settings
-
+                <span>⚙</span> Settings
             </a>
-
         </nav>
 
+        <div class="sidebar-bottom">
+            <div class="hotel-info">
+                <strong>Grand Stay Hotel</strong>
+                <small class="hotel-count">Loading hotel details...</small>
+            </div>
+
+            <a href="/" class="logout">Logout</a>
+        </div>
     </aside>
 
-
     <main class="main">
+        <div class="dashboard-page">
 
+            <header class="dashboard-heading">
+                <div>
+                    <p class="eyebrow">HOTEL MANAGEMENT</p>
+                    <h1>Dashboard</h1>
+                    <p>Welcome back. Here's your hotel's overview.</p>
+                </div>
 
-        <div class="topbar">
+                <div class="online-indicator">
+                    <span class="online-dot"></span>
+                    System Online
+                </div>
+            </header>
 
-            <div>
+            <!-- WELCOME BANNER -->
 
-                <p class="eyebrow">
-                    GRAND STAY HOTEL
-                </p>
+            <section class="welcome">
+                <div class="welcome-content">
+                    <p class="eyebrow">WELCOME TO GRAND STAY</p>
 
-                <h1>
-                    Dashboard
-                </h1>
+                    <h2>Manage your hotel with ease.</h2>
 
-            </div>
+                    <p>
+                        Monitor room availability, manage reservations
+                        and keep track of your hotel operations from
+                        one convenient place.
+                    </p>
 
+                    <div class="welcome-actions">
+                        <a href="/booking.html" class="welcome-primary">
+                            + Create Booking
+                        </a>
 
-            <button
-                class="theme-btn"
-                onclick="toggleTheme()">
+                        <a href="/rooms.html" class="welcome-secondary">
+                            Explore Rooms →
+                        </a>
+                    </div>
+                </div>
 
-                ☾
+                <div class="welcome-mark">✦</div>
+            </section>
 
-            </button>
+            <!-- DASHBOARD STATISTICS -->
+
+            <section class="stats-grid">
+
+                <div class="stat-card">
+                    <div class="stat-icon">▦</div>
+                    <div>
+                        <span>Total Rooms</span>
+                        <strong id="totalRooms">—</strong>
+                    </div>
+                </div>
+
+                <div class="stat-card available">
+                    <div class="stat-icon">✓</div>
+                    <div>
+                        <span>Available Rooms</span>
+                        <strong id="availableRooms">—</strong>
+                    </div>
+                </div>
+
+                <div class="stat-card booked">
+                    <div class="stat-icon">!</div>
+                    <div>
+                        <span>Booked Rooms</span>
+                        <strong id="bookedRooms">—</strong>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon">☷</div>
+                    <div>
+                        <span>Total Bookings</span>
+                        <strong id="totalBookings">—</strong>
+                    </div>
+                </div>
+
+                <div class="stat-card revenue">
+                    <div class="stat-icon">₹</div>
+                    <div>
+                        <span>Total Revenue</span>
+                        <strong id="revenue">—</strong>
+                    </div>
+                </div>
+
+            </section>
+
+            <!-- QUICK ACTIONS -->
+
+            <section class="dashboard-section">
+                <div class="section-heading">
+                    <div>
+                        <p class="eyebrow">QUICK ACTIONS</p>
+                        <h2>Hotel Operations</h2>
+                    </div>
+                </div>
+
+                <div class="action-grid">
+
+                    <a href="/rooms.html" class="action-card">
+                        <div class="action-icon">▦</div>
+                        <div>
+                            <h3>View Rooms</h3>
+                            <p>Check availability across floors</p>
+                        </div>
+                        <span class="action-arrow">→</span>
+                    </a>
+
+                    <a href="/booking.html" class="action-card">
+                        <div class="action-icon">＋</div>
+                        <div>
+                            <h3>New Booking</h3>
+                            <p>Create a guest reservation</p>
+                        </div>
+                        <span class="action-arrow">→</span>
+                    </a>
+
+                    <a href="/bookings.html" class="action-card">
+                        <div class="action-icon">☷</div>
+                        <div>
+                            <h3>Booking History</h3>
+                            <p>View and manage reservations</p>
+                        </div>
+                        <span class="action-arrow">→</span>
+                    </a>
+
+                </div>
+            </section>
+
+            <!-- ROOM STATUS -->
+
+            <section class="dashboard-section">
+                <div class="section-heading">
+                    <div>
+                        <p class="eyebrow">ROOM MANAGEMENT</p>
+                        <h2>Room Status</h2>
+                    </div>
+
+                    <a href="/rooms.html" class="view-link">
+                        View All Rooms →
+                    </a>
+                </div>
+
+                <div id="roomGrid" class="mini-room-grid">
+                    <div class="loading">Loading rooms...</div>
+                </div>
+            </section>
+
+            <!-- RECENT BOOKINGS -->
+
+            <section class="dashboard-section">
+                <div class="section-heading">
+                    <div>
+                        <p class="eyebrow">RESERVATIONS</p>
+                        <h2>Recent Bookings</h2>
+                    </div>
+
+                    <a href="/bookings.html" class="view-link">
+                        View History →
+                    </a>
+                </div>
+
+                <div class="table-card">
+                    <div class="table-scroll">
+                        <table class="recent-table">
+                            <thead>
+                                <tr>
+                                    <th>Booking ID</th>
+                                    <th>Guest</th>
+                                    <th>Room</th>
+                                    <th>Days</th>
+                                    <th>Total</th>
+                                </tr>
+                            </thead>
+
+                            <tbody id="recentBookings">
+                                <tr>
+                                    <td colspan="5" class="loading">
+                                        Loading bookings...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
 
         </div>
-
-
-        <!-- HOTEL BANNER -->
-
-        <section class="hotel-banner">
-
-            <div class="hotel-banner-image"></div>
-
-
-            <div class="hotel-banner-content">
-
-                <div class="profile-logo">
-                    GS
-                </div>
-
-
-                <div>
-
-                    <p class="eyebrow">
-                        HOTEL ADMINISTRATION
-                    </p>
-
-                    <h2>
-                        Grand Stay Hotel
-                    </h2>
-
-                    <p>
-                        Manage rooms, guests,
-                        bookings and services
-                        from one place.
-                    </p>
-
-                </div>
-
-            </div>
-
-        </section>
-
-
-        <!-- STATISTICS -->
-
-        <section class="stats-grid">
-
-
-            <div class="stat-card">
-
-                <span>
-                    Total Rooms
-                </span>
-
-                <strong id="totalRooms">
-                    0
-                </strong>
-
-                <small>
-                    Across all floors
-                </small>
-
-            </div>
-
-
-            <div class="stat-card">
-
-                <span>
-                    Available Rooms
-                </span>
-
-                <strong id="availableRooms">
-                    0
-                </strong>
-
-                <small>
-                    Ready for booking
-                </small>
-
-            </div>
-
-
-            <div class="stat-card">
-
-                <span>
-                    Occupied Rooms
-                </span>
-
-                <strong id="bookedRooms">
-                    0
-                </strong>
-
-                <small>
-                    Currently occupied
-                </small>
-
-            </div>
-
-
-            <div class="stat-card">
-
-                <span>
-                    Total Bookings
-                </span>
-
-                <strong id="totalBookings">
-                    0
-                </strong>
-
-                <small>
-                    Booking records
-                </small>
-
-            </div>
-
-
-            <div class="stat-card revenue-card">
-
-                <span>
-                    Total Revenue
-                </span>
-
-                <strong id="revenue">
-                    ₹0.00
-                </strong>
-
-                <small>
-                    Rooms + services
-                </small>
-
-            </div>
-
-        </section>
-
-
-        <!-- QUICK ACTIONS -->
-
-        <section class="section">
-
-            <div class="section-heading">
-
-                <div>
-
-                    <p class="eyebrow">
-                        QUICK ACTIONS
-                    </p>
-
-                    <h2>
-                        Hotel operations
-                    </h2>
-
-                </div>
-
-            </div>
-
-
-            <div class="action-grid">
-
-                <a class="action-card"
-                   href="/booking.html">
-
-                    <div class="action-icon">
-                        ＋
-                    </div>
-
-                    <h3>
-                        New Booking
-                    </h3>
-
-                    <p>
-                        Create a new guest reservation.
-                    </p>
-
-                </a>
-
-
-                <a class="action-card"
-                   href="/rooms.html">
-
-                    <div class="action-icon">
-                        ▦
-                    </div>
-
-                    <h3>
-                        View Rooms
-                    </h3>
-
-                    <p>
-                        Check room availability.
-                    </p>
-
-                </a>
-
-
-                <a class="action-card"
-                   href="/bookings.html">
-
-                    <div class="action-icon">
-                        ☷
-                    </div>
-
-                    <h3>
-                        Booking History
-                    </h3>
-
-                    <p>
-                        Manage existing reservations.
-                    </p>
-
-                </a>
-
-            </div>
-
-        </section>
-
-
-        <!-- RECENT BOOKINGS -->
-
-        <section class="card">
-
-            <div class="section-heading">
-
-                <div>
-
-                    <p class="eyebrow">
-                        RECENT ACTIVITY
-                    </p>
-
-                    <h2>
-                        Recent bookings
-                    </h2>
-
-                </div>
-
-
-                <a
-                    class="btn secondary"
-                    href="/bookings.html">
-
-                    View All
-
-                </a>
-
-            </div>
-
-
-            <div id="recentBookings"
-                 class="table-wrap">
-
-                Loading...
-
-            </div>
-
-        </section>
-
-
     </main>
-
 </div>
 
+<button
+    type="button"
+    class="theme-btn"
+    id="themeToggle"
+    aria-label="Switch colour theme">
+    🌙 Dark Mode
+</button>
 
 <script>
+"use strict";
 
-function toggleTheme() {
+/* ---------------- THEME ---------------- */
 
-    const dark =
-        document.documentElement
-                .classList.toggle(
-                    "dark-mode"
-                );
+function applyTheme() {
+    const dark = localStorage.getItem("grandStayTheme") === "dark";
 
-    localStorage.setItem(
-        "grandStayTheme",
-        dark ? "dark" : "light"
-    );
+    document.documentElement.classList.toggle("dark-mode", dark);
+
+    document.getElementById("themeToggle").textContent =
+        dark ? "☀️ Light Mode" : "🌙 Dark Mode";
 }
 
+document.getElementById("themeToggle").addEventListener("click", function () {
+    const dark = localStorage.getItem("grandStayTheme") !== "dark";
 
-function money(value) {
+    localStorage.setItem("grandStayTheme", dark ? "dark" : "light");
+    applyTheme();
+});
 
-    return "₹" +
-        Number(value || 0)
-            .toLocaleString(
-                "en-IN",
-                {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2
-                }
-            );
+/* ---------------- HELPERS ---------------- */
+
+function currency(value) {
+    return "₹" + Number(value || 0).toLocaleString("en-IN");
 }
 
-
-function escapeText(value) {
-
-    return String(value ?? "")
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
-        .replaceAll("'", "&#39;");
+function isAvailable(room) {
+    return room.available === true ||
+        room.available === 1 ||
+        room.available === "1";
 }
 
+/* ---------------- DASHBOARD DATA ---------------- */
 
 async function loadDashboard() {
-
     try {
+        const response = await fetch("/dashboard-data");
 
-        const response =
-            await fetch(
-                "/dashboard-data?x=" +
-                Date.now()
-            );
+        if (!response.ok) {
+            throw new Error("Unable to fetch dashboard data.");
+        }
 
-
-        const data =
-            await response.json();
-
+        const data = await response.json();
 
         if (data.error) {
-
-            throw new Error(
-                data.error
-            );
+            throw new Error(data.error);
         }
 
+        document.getElementById("totalRooms").textContent =
+            data.totalRooms ?? 0;
 
-        document.getElementById(
-            "totalRooms"
-        ).textContent =
-            data.totalRooms;
+        document.getElementById("availableRooms").textContent =
+            data.availableRooms ?? 0;
 
+        document.getElementById("bookedRooms").textContent =
+            data.bookedRooms ?? 0;
 
-        document.getElementById(
-            "availableRooms"
-        ).textContent =
-            data.availableRooms;
+        document.getElementById("totalBookings").textContent =
+            data.totalBookings ?? 0;
 
+        document.getElementById("revenue").textContent =
+            currency(data.revenue);
 
-        document.getElementById(
-            "bookedRooms"
-        ).textContent =
-            data.bookedRooms;
-
-
-        document.getElementById(
-            "totalBookings"
-        ).textContent =
-            data.totalBookings;
-
-
-        document.getElementById(
-            "revenue"
-        ).textContent =
-            money(data.revenue);
-
-
-        const container =
-            document.getElementById(
-                "recentBookings"
-            );
-
-
-        if (
-            !data.recentBookings ||
-            data.recentBookings.length === 0
-        ) {
-
-            container.innerHTML =
-                '<div class="empty">' +
-                'No bookings yet.' +
-                '</div>';
-
-            return;
-        }
-
-
-        let html =
-
-            '<table class="data-table">' +
-
-            '<thead>' +
-
-            '<tr>' +
-
-            '<th>ID</th>' +
-            '<th>Guest</th>' +
-            '<th>Room</th>' +
-            '<th>Nights</th>' +
-            '<th>Total</th>' +
-            '<th>Status</th>' +
-
-            '</tr>' +
-
-            '</thead>' +
-
-            '<tbody>';
-
-
-        data.recentBookings
-            .forEach(
-                booking => {
-
-                    const total =
-                        Number(
-                            booking.total || 0
-                        ) +
-                        Number(
-                            booking.serviceTotal || 0
-                        );
-
-
-                    html +=
-
-                        '<tr>' +
-
-                        '<td>#' +
-                        booking.bookingId +
-                        '</td>' +
-
-                        '<td>' +
-                        escapeText(
-                            booking.name
-                        ) +
-                        '</td>' +
-
-                        '<td>Room ' +
-                        booking.room +
-                        '<br><small>' +
-                        escapeText(
-                            booking.roomType
-                        ) +
-                        '</small></td>' +
-
-                        '<td>' +
-                        booking.days +
-                        '</td>' +
-
-                        '<td>' +
-                        money(total) +
-                        '</td>' +
-
-                        '<td>' +
-
-                        '<span class="status ' +
-                        (
-                            booking.status === "ACTIVE"
-                                ? "active"
-                                : booking.status === "CHECKED_OUT"
-                                    ? "checked"
-                                    : "cancelled"
-                        ) +
-                        '">' +
-
-                        escapeText(
-                            booking.status
-                        ) +
-
-                        '</span>' +
-
-                        '</td>' +
-
-                        '</tr>';
-                }
-            );
-
-
-        html +=
-            '</tbody></table>';
-
-
-        container.innerHTML =
-            html;
-
+        displayRooms(data.rooms || []);
+        displayRecentBookings(data.recentBookings || []);
 
     } catch (error) {
+        console.error("Dashboard loading error:", error);
 
-        document.getElementById(
-            "recentBookings"
-        ).innerHTML =
-
-            '<div class="empty">' +
-
-            'Unable to load dashboard data.' +
-
-            '</div>';
-
-        console.error(error);
+        showDashboardError("roomGrid", "Unable to load room information.");
+        showDashboardError(
+            "recentBookings",
+            "Unable to load recent bookings.",
+            true
+        );
     }
 }
 
+function showDashboardError(elementId, message, table = false) {
+    const container = document.getElementById(elementId);
+    container.replaceChildren();
 
+    const element = document.createElement(table ? "tr" : "div");
+
+    if (table) {
+        const cell = document.createElement("td");
+        cell.colSpan = 5;
+        cell.className = "error-state";
+        cell.textContent = message;
+        element.appendChild(cell);
+    } else {
+        element.className = "error-state";
+        element.textContent = message;
+    }
+
+    container.appendChild(element);
+}
+
+/* ---------------- ROOM STATUS ---------------- */
+
+function displayRooms(rooms) {
+    const grid = document.getElementById("roomGrid");
+    grid.replaceChildren();
+
+    if (!rooms.length) {
+        const empty = document.createElement("div");
+        empty.className = "empty-state";
+        empty.textContent = "No rooms found.";
+        grid.appendChild(empty);
+        return;
+    }
+
+    rooms.slice(0, 8).forEach(function (room) {
+        const available = isAvailable(room);
+
+        const card = document.createElement("div");
+        card.className =
+            "mini-room " +
+            (available ? "room-available" : "room-booked");
+
+        const number = document.createElement("div");
+        number.className = "mini-room-number";
+        number.textContent = room.roomNumber ?? "—";
+
+        const info = document.createElement("div");
+        info.className = "mini-room-info";
+
+        const type = document.createElement("strong");
+        type.textContent = room.roomType ?? room.type ?? "Room";
+
+        const floor = document.createElement("small");
+        floor.textContent =
+            "Floor " + (room.floor ?? room.floorNumber ?? "—");
+
+        info.append(type, floor);
+
+        const status = document.createElement("span");
+        status.className = "mini-room-status";
+        status.title = available ? "Available" : "Booked";
+
+        card.append(number, info, status);
+        grid.appendChild(card);
+    });
+}
+
+/* ---------------- RECENT BOOKINGS ---------------- */
+
+function displayRecentBookings(bookings) {
+    const tbody = document.getElementById("recentBookings");
+    tbody.replaceChildren();
+
+    if (!bookings.length) {
+        const row = document.createElement("tr");
+        const cell = document.createElement("td");
+
+        cell.colSpan = 5;
+        cell.className = "empty-state";
+        cell.textContent = "No bookings yet.";
+
+        row.appendChild(cell);
+        tbody.appendChild(row);
+        return;
+    }
+
+    bookings.slice(0, 5).forEach(function (booking) {
+        const row = document.createElement("tr");
+
+        const values = [
+            "#" + (booking.bookingId ?? booking.id ?? "—"),
+            booking.name ?? booking.guestName ?? "—",
+            "Room " + (booking.roomNumber ?? booking.room ?? "—"),
+            booking.days ?? "—",
+            currency(booking.total)
+        ];
+
+        values.forEach(function (value) {
+            const cell = document.createElement("td");
+            cell.textContent = value;
+            row.appendChild(cell);
+        });
+
+        tbody.appendChild(row);
+    });
+}
+
+/* ---------------- HOTEL INFORMATION ---------------- */
+
+async function loadHotelInformation() {
+    try {
+        const response = await fetch("/all-rooms");
+
+        if (!response.ok) return;
+
+        const rooms = await response.json();
+
+        if (!Array.isArray(rooms)) return;
+
+        const floorNumbers = rooms.map(function (room) {
+            return Number(room.floor ?? room.floorNumber) || 0;
+        });
+
+        const floorCount = floorNumbers.length
+            ? Math.max(...floorNumbers)
+            : 0;
+
+        document.querySelectorAll(".hotel-count").forEach(function (element) {
+            element.textContent =
+                `${floorCount} Floors · ${rooms.length} Rooms`;
+        });
+
+    } catch (error) {
+        console.warn("Hotel information could not be loaded.", error);
+    }
+}
+
+/* ---------------- INITIAL LOAD ---------------- */
+
+applyTheme();
 loadDashboard();
+loadHotelInformation();
 
-setInterval(
-    loadDashboard,
-    7000
-);
-
+setInterval(loadDashboard, 10000);
+setInterval(loadHotelInformation, 30000);
 </script>
 
 </body>
-
 </html>

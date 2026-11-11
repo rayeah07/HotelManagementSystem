@@ -1,362 +1,735 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rooms | Grand Stay</title>
+    <link rel="stylesheet" href="/css/style.css">
 
-    <meta name="viewport"
-          content="width=device-width, initial-scale=1">
-
-    <title>Rooms - Grand Stay</title>
-
-    <link rel="stylesheet"
-          href="/css/style.css">
-
-    <script>
-
-        if (
-            localStorage.getItem("grandStayTheme")
-            === "dark"
-        ) {
-
-            document.documentElement
-                    .classList.add("dark-mode");
+    <style>
+        .rooms-page {
+            padding: 25px 28px 40px;
+            max-width: 1450px;
+            margin: auto;
         }
 
-    </script>
+        .rooms-heading {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
 
+        .rooms-heading h1 {
+            margin: 0 0 6px;
+        }
+
+        .rooms-heading p {
+            margin: 0;
+            color: var(--muted);
+        }
+
+        .rooms-summary {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 16px;
+            margin-bottom: 22px;
+        }
+
+        .room-summary-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 20px;
+            box-shadow: var(--shadow);
+        }
+
+        .room-summary-card span {
+            display: block;
+            color: var(--muted);
+            font-size: 13px;
+            margin-bottom: 9px;
+        }
+
+        .room-summary-card strong {
+            font-size: 27px;
+        }
+
+        .room-summary-card.available strong {
+            color: #35a66e;
+        }
+
+        .room-summary-card.booked strong {
+            color: #d18c48;
+        }
+
+        .rooms-toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 14px;
+            margin-bottom: 22px;
+        }
+
+        .room-search {
+            width: min(320px, 100%);
+        }
+
+        .room-search input,
+        .room-filter select {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 11px 13px;
+            border: 1px solid var(--border);
+            border-radius: 9px;
+            background: var(--surface);
+            color: var(--text);
+        }
+
+        .room-filter {
+            width: 180px;
+        }
+
+        .legend {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            color: var(--muted);
+            font-size: 12px;
+            margin-bottom: 23px;
+        }
+
+        .legend span {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+        }
+
+        .dot {
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .available-dot {
+            background: #35a66e;
+        }
+
+        .booked-dot {
+            background: #d18c48;
+        }
+
+        .floor-section {
+            margin-bottom: 28px;
+        }
+
+        .floor-title {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 14px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .floor-title h2 {
+            margin: 5px 0 0;
+            font-size: 19px;
+        }
+
+        .floor-title span {
+            font-size: 10px;
+            letter-spacing: .08em;
+            color: var(--muted);
+            font-weight: 800;
+        }
+
+        .floor-title small {
+            color: var(--muted);
+        }
+
+        .room-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 15px;
+        }
+
+        .room-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 13px;
+            overflow: hidden;
+            box-shadow: var(--shadow);
+            transition: transform .2s ease, border-color .2s ease;
+        }
+
+        .room-card:hover {
+            transform: translateY(-3px);
+        }
+
+        .room-card.available-room {
+            border-top: 3px solid #35a66e;
+        }
+
+        .room-card.booked-room {
+            border-top: 3px solid #d18c48;
+        }
+
+        .room-card-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            padding: 17px 17px 12px;
+        }
+
+        .large-room-number {
+            font-size: 25px;
+            font-weight: 800;
+        }
+
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            padding: 6px 10px;
+            border-radius: 30px;
+            font-size: 10px;
+            font-weight: 800;
+        }
+
+        .status-pill.available {
+            color: #198754;
+            background: rgba(25, 135, 84, .13);
+        }
+
+        .status-pill.booked {
+            color: #a36a25;
+            background: rgba(190, 145, 67, .16);
+        }
+
+        .room-card-body {
+            padding: 0 17px 16px;
+        }
+
+        .room-card-body h3 {
+            margin: 0 0 7px;
+            font-size: 16px;
+        }
+
+        .room-card-body p {
+            color: var(--muted);
+            font-size: 12px;
+            line-height: 1.5;
+            min-height: 36px;
+            margin: 0 0 12px;
+        }
+
+        .room-price {
+            font-size: 17px;
+            font-weight: 800;
+        }
+
+        .room-price small {
+            font-size: 11px;
+            color: var(--muted);
+            font-weight: 400;
+        }
+
+        .room-book-btn,
+        .room-booked-label {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: calc(100% - 34px);
+            box-sizing: border-box;
+            margin: 0 17px 17px;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 700;
+            text-decoration: none;
+        }
+
+        .room-book-btn {
+            background: var(--primary);
+            color: white;
+        }
+
+        .room-booked-label {
+            background: var(--surface2);
+            color: var(--muted);
+        }
+
+        .empty-state,
+        .error-state {
+            text-align: center;
+            padding: 45px 20px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            color: var(--muted);
+        }
+
+        .empty-state h3 {
+            color: var(--text);
+            margin-bottom: 7px;
+        }
+
+        .error-state {
+            color: #c0392b;
+        }
+
+        @media (max-width: 1050px) {
+            .rooms-summary {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            .room-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+
+        @media (max-width: 650px) {
+            .rooms-page {
+                padding: 20px 14px 35px;
+            }
+
+            .rooms-summary,
+            .room-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .rooms-toolbar {
+                align-items: stretch;
+            }
+
+            .room-search,
+            .room-filter {
+                width: 100%;
+            }
+        }
+    </style>
 </head>
 
-
 <body>
-
-<div class="app-shell">
-
+<div class="app">
 
     <aside class="sidebar">
-
         <div class="brand">
-            GRAND STAY
-            <span>HOTEL</span>
+            <div class="brand-logo">GS</div>
+            <div>
+                <strong>Grand Stay</strong>
+                <span>HOTEL</span>
+            </div>
         </div>
-
 
         <nav>
-
-            <a href="/dashboard.html">
-                <span>⌂</span>
-                Dashboard
-            </a>
-
-            <a class="active"
-               href="/rooms.html">
-                <span>▦</span>
-                Rooms
-            </a>
-
-            <a href="/booking.html">
-                <span>＋</span>
-                New Booking
-            </a>
-
-            <a href="/bookings.html">
-                <span>☷</span>
-                Booking History
-            </a>
-
-            <a href="/settings.html">
-                <span>⚙</span>
-                Settings
-            </a>
-
+            <a href="/dashboard.html"><span>⌂</span> Dashboard</a>
+            <a class="active" href="/rooms.html"><span>▦</span> Rooms</a>
+            <a href="/booking.html"><span>＋</span> New Booking</a>
+            <a href="/bookings.html"><span>☷</span> Booking History</a>
+            <a href="/settings.html"><span>⚙</span> Settings</a>
         </nav>
 
+        <div class="sidebar-bottom">
+            <div class="hotel-info">
+                <strong>Grand Stay Hotel</strong>
+                <small class="hotel-count">Loading hotel details...</small>
+            </div>
+            <a href="/" class="logout">Logout</a>
+        </div>
     </aside>
 
-
     <main class="main">
+        <div class="rooms-page">
 
+            <header class="rooms-heading">
+                <div>
+                    <p class="eyebrow">HOTEL MANAGEMENT</p>
+                    <h1>Rooms</h1>
+                    <p>Explore room availability across all hotel floors.</p>
+                </div>
 
-        <div class="topbar">
+                <a href="/booking.html" class="top-button">
+                    + New Booking
+                </a>
+            </header>
 
-            <div>
+            <!-- SUMMARY -->
 
-                <p class="eyebrow">
-                    HOTEL INVENTORY
-                </p>
+            <section class="rooms-summary">
+                <div class="room-summary-card">
+                    <span>Total Rooms</span>
+                    <strong id="totalRoomsCount">—</strong>
+                </div>
 
-                <h1>
-                    Rooms
-                </h1>
+                <div class="room-summary-card available">
+                    <span>Available Rooms</span>
+                    <strong id="availableCount">—</strong>
+                </div>
 
+                <div class="room-summary-card booked">
+                    <span>Booked Rooms</span>
+                    <strong id="bookedCount">—</strong>
+                </div>
+
+                <div class="room-summary-card">
+                    <span>Total Floors</span>
+                    <strong id="floorCount">—</strong>
+                </div>
+            </section>
+
+            <!-- SEARCH AND FILTER -->
+
+            <div class="rooms-toolbar">
+                <div class="room-search">
+                    <input
+                        type="search"
+                        id="roomSearch"
+                        placeholder="Search room number or room type..."
+                        aria-label="Search rooms"
+                    >
+                </div>
+
+                <div class="room-filter">
+                    <select id="availabilityFilter" aria-label="Filter by availability">
+                        <option value="all">All Rooms</option>
+                        <option value="available">Available</option>
+                        <option value="booked">Booked</option>
+                    </select>
+                </div>
             </div>
 
+            <!-- LEGEND -->
 
-            <button
-                class="theme-btn"
-                onclick="toggleTheme()">
+            <div class="legend">
+                <span>
+                    <i class="dot available-dot"></i>
+                    Available
+                </span>
 
-                ☾
+                <span>
+                    <i class="dot booked-dot"></i>
+                    Booked
+                </span>
+            </div>
 
-            </button>
+            <!-- FLOOR-WISE ROOMS -->
+
+            <div id="roomsContainer">
+                <div class="loading">Loading rooms...</div>
+            </div>
 
         </div>
-
-
-        <div class="room-summary">
-
-            <div>
-                <span>Total</span>
-                <strong id="total">0</strong>
-            </div>
-
-            <div>
-                <span>Available</span>
-                <strong id="available">0</strong>
-            </div>
-
-            <div>
-                <span>Occupied</span>
-                <strong id="occupied">0</strong>
-            </div>
-
-        </div>
-
-
-        <div id="roomsContainer">
-
-            Loading rooms...
-
-        </div>
-
-
     </main>
-
 </div>
 
+<button
+    type="button"
+    class="theme-btn"
+    id="themeToggle"
+    aria-label="Switch colour theme">
+    🌙 Dark Mode
+</button>
 
 <script>
+"use strict";
 
-function toggleTheme() {
+let allRooms = [];
 
-    const dark =
-        document.documentElement
-                .classList.toggle(
-                    "dark-mode"
-                );
+/* ---------------- THEME ---------------- */
 
-    localStorage.setItem(
-        "grandStayTheme",
-        dark ? "dark" : "light"
-    );
+function applyTheme() {
+    const dark = localStorage.getItem("grandStayTheme") === "dark";
+
+    document.documentElement.classList.toggle("dark-mode", dark);
+
+    document.getElementById("themeToggle").textContent =
+        dark ? "☀️ Light Mode" : "🌙 Dark Mode";
 }
 
+document.getElementById("themeToggle").addEventListener("click", function () {
+    const dark = localStorage.getItem("grandStayTheme") !== "dark";
 
-function money(value) {
+    localStorage.setItem("grandStayTheme", dark ? "dark" : "light");
+    applyTheme();
+});
 
-    return "₹" +
-        Number(value || 0)
-            .toLocaleString(
-                "en-IN",
-                {
-                    minimumFractionDigits: 2
-                }
-            );
+/* ---------------- HELPERS ---------------- */
+
+function isRoomAvailable(room) {
+    return room.available === true ||
+        room.available === 1 ||
+        room.available === "1";
 }
 
+function getRoomType(room) {
+    return String(room.roomType ?? room.type ?? "Standard");
+}
 
-async function loadRooms() {
+function currency(value) {
+    return "₹" + Number(value || 0).toLocaleString("en-IN");
+}
 
-    try {
+/* ---------------- ROOM SUMMARY ---------------- */
 
-        const response =
-            await fetch(
-                "/all-rooms?x=" +
-                Date.now()
-            );
+function updateRoomSummary(rooms, floors) {
+    const available = rooms.filter(isRoomAvailable).length;
+    const booked = rooms.length - available;
 
+    document.getElementById("totalRoomsCount").textContent =
+        rooms.length;
 
-        const rooms =
-            await response.json();
+    document.getElementById("availableCount").textContent =
+        available;
 
+    document.getElementById("bookedCount").textContent =
+        booked;
 
-        if (!Array.isArray(rooms)) {
+    document.getElementById("floorCount").textContent =
+        floors.length;
 
-            throw new Error(
-                "Unable to load rooms."
-            );
-        }
+    document.querySelectorAll(".hotel-count").forEach(element => {
+        element.textContent =
+            `${floors.length} Floors · ${rooms.length} Rooms`;
+    });
+}
 
+/* ---------------- ROOM CARD ---------------- */
 
-        const available =
-            rooms.filter(
-                room =>
-                    room.available
-            ).length;
+function createRoomCard(room) {
+    const card = document.createElement("article");
 
+    const available = isRoomAvailable(room);
+    const roomType = getRoomType(room);
+    const roomNumber = room.roomNumber ?? "";
 
-        document.getElementById(
-            "total"
-        ).textContent =
-            rooms.length;
+    card.className =
+        "room-card " +
+        (available ? "available-room" : "booked-room");
 
+    const top = document.createElement("div");
+    top.className = "room-card-top";
 
-        document.getElementById(
-            "available"
-        ).textContent =
-            available;
+    const number = document.createElement("div");
+    number.className = "large-room-number";
+    number.textContent = roomNumber;
 
+    const status = document.createElement("span");
+    status.className =
+        "status-pill " + (available ? "available" : "booked");
+    status.textContent = available ? "Available" : "Booked";
 
-        document.getElementById(
-            "occupied"
-        ).textContent =
-            rooms.length -
-            available;
+    top.append(number, status);
 
+    const body = document.createElement("div");
+    body.className = "room-card-body";
 
-        const floors = {};
+    const heading = document.createElement("h3");
+    heading.textContent = roomType;
 
+    const description = document.createElement("p");
+    const normalizedType = roomType.toLowerCase();
 
-        rooms.forEach(
-            room => {
+    if (normalizedType.includes("single")) {
+        description.textContent =
+            "A comfortable room designed for one guest.";
+    } else if (normalizedType.includes("deluxe")) {
+        description.textContent =
+            "A premium room offering additional comfort.";
+    } else if (normalizedType.includes("double")) {
+        description.textContent =
+            "A spacious room suitable for two guests.";
+    } else {
+        description.textContent =
+            "Comfortable accommodation for your stay.";
+    }
 
-                if (!floors[room.floor]) {
+    const price = document.createElement("div");
+    price.className = "room-price";
+    price.textContent = currency(room.price);
 
-                    floors[room.floor] =
-                        [];
-                }
+    const perNight = document.createElement("small");
+    perNight.textContent = " / night";
+    price.appendChild(perNight);
 
+    body.append(heading, description, price);
+    card.append(top, body);
 
-                floors[room.floor]
-                    .push(room);
-            }
+    if (available) {
+        const link = document.createElement("a");
+        link.className = "room-book-btn";
+        link.href = "/booking.html?room=" +
+            encodeURIComponent(roomNumber);
+        link.textContent = "Book This Room →";
+        card.appendChild(link);
+    } else {
+        const label = document.createElement("div");
+        label.className = "room-booked-label";
+        label.textContent = "Currently Occupied";
+        card.appendChild(label);
+    }
+
+    return card;
+}
+
+/* ---------------- DISPLAY ROOMS ---------------- */
+
+function displayRooms(rooms) {
+    const container = document.getElementById("roomsContainer");
+    container.replaceChildren();
+
+    if (rooms.length === 0) {
+        const empty = document.createElement("div");
+        empty.className = "empty-state";
+
+        const heading = document.createElement("h3");
+        heading.textContent = "No rooms found";
+
+        const message = document.createElement("p");
+        message.textContent =
+            "Try changing your search or availability filter.";
+
+        empty.append(heading, message);
+        container.appendChild(empty);
+        return;
+    }
+
+    const floors = [
+        ...new Set(
+            rooms.map(room => Number(room.floor ?? room.floorNumber))
+        )
+    ].filter(Number.isFinite).sort((a, b) => a - b);
+
+    floors.forEach(floorNumber => {
+        const floorRooms = rooms.filter(
+            room => Number(room.floor ?? room.floorNumber) === floorNumber
         );
 
+        const section = document.createElement("section");
+        section.className = "floor-section";
 
-        let html = "";
+        const title = document.createElement("div");
+        title.className = "floor-title";
 
+        const left = document.createElement("div");
 
-        Object.keys(floors)
-            .sort(
-                (a,b) =>
-                    Number(a) -
-                    Number(b)
+        const eyebrow = document.createElement("span");
+        eyebrow.textContent = "FLOOR " + floorNumber;
+
+        const heading = document.createElement("h2");
+        heading.textContent =
+            floorNumber === 1 ? "Ground Floor" : "Floor " + floorNumber;
+
+        left.append(eyebrow, heading);
+
+        const count = document.createElement("small");
+        count.textContent =
+            floorRooms.length +
+            (floorRooms.length === 1 ? " Room" : " Rooms");
+
+        title.append(left, count);
+
+        const grid = document.createElement("div");
+        grid.className = "room-grid";
+
+        floorRooms.forEach(room => {
+            grid.appendChild(createRoomCard(room));
+        });
+
+        section.append(title, grid);
+        container.appendChild(section);
+    });
+}
+
+/* ---------------- SEARCH AND FILTER ---------------- */
+
+function filterRooms() {
+    const query = document.getElementById("roomSearch")
+        .value.trim().toLowerCase();
+
+    const filter = document.getElementById("availabilityFilter").value;
+
+    const filtered = allRooms.filter(room => {
+        const matchesSearch =
+            String(room.roomNumber ?? "").toLowerCase().includes(query) ||
+            getRoomType(room).toLowerCase().includes(query);
+
+        const available = isRoomAvailable(room);
+
+        const matchesAvailability =
+            filter === "all" ||
+            (filter === "available" && available) ||
+            (filter === "booked" && !available);
+
+        return matchesSearch && matchesAvailability;
+    });
+
+    displayRooms(filtered);
+}
+
+document.getElementById("roomSearch").addEventListener(
+    "input", filterRooms
+);
+
+document.getElementById("availabilityFilter").addEventListener(
+    "change", filterRooms
+);
+
+/* ---------------- LOAD ROOMS ---------------- */
+
+async function loadRooms() {
+    const container = document.getElementById("roomsContainer");
+
+    try {
+        const response = await fetch("/all-rooms");
+
+        if (!response.ok) {
+            throw new Error("Unable to fetch room information.");
+        }
+
+        const rooms = await response.json();
+
+        if (!Array.isArray(rooms)) {
+            throw new Error("Invalid room data received.");
+        }
+
+        allRooms = rooms;
+
+        const floors = [
+            ...new Set(
+                rooms.map(room => Number(room.floor ?? room.floorNumber))
             )
-            .forEach(
-                floor => {
+        ].filter(Number.isFinite);
 
-                    html +=
-
-                        '<section class="floor-section">' +
-
-                        '<div class="floor-heading">' +
-
-                        '<div>' +
-
-                        '<p class="eyebrow">' +
-                        'FLOOR' +
-                        '</p>' +
-
-                        '<h2>' +
-                        floor +
-                        '</h2>' +
-
-                        '</div>' +
-
-                        '<span>' +
-                        floors[floor].length +
-                        ' rooms' +
-                        '</span>' +
-
-                        '</div>' +
-
-                        '<div class="room-grid">';
-
-
-                    floors[floor]
-                        .forEach(
-                            room => {
-
-                                html +=
-
-                                    '<div class="room-card ' +
-                                    (
-                                        room.available
-                                            ? "available"
-                                            : "occupied"
-                                    ) +
-                                    '">' +
-
-                                    '<div class="room-number">' +
-
-                                    room.roomNumber +
-
-                                    '</div>' +
-
-                                    '<div>' +
-
-                                    '<h3>' +
-                                    room.roomType +
-                                    '</h3>' +
-
-                                    '<p>' +
-                                    money(room.price) +
-                                    ' / night</p>' +
-
-                                    '</div>' +
-
-                                    '<span class="room-status">' +
-
-                                    (
-                                        room.available
-                                            ? "Available"
-                                            : "Occupied"
-                                    ) +
-
-                                    '</span>' +
-
-                                    '</div>';
-                            }
-                        );
-
-
-                    html +=
-                        '</div></section>';
-                }
-            );
-
-
-        document.getElementById(
-            "roomsContainer"
-        ).innerHTML =
-            html;
-
+        updateRoomSummary(rooms, floors);
+        filterRooms();
 
     } catch (error) {
+        console.error("Rooms loading error:", error);
 
-        document.getElementById(
-            "roomsContainer"
-        ).innerHTML =
+        container.innerHTML = "";
 
-            '<div class="empty">' +
-            'Unable to load rooms.' +
-            '</div>';
+        const message = document.createElement("div");
+        message.className = "error-state";
+        message.textContent =
+            "Unable to load rooms. Please check that the server is running and refresh the page.";
 
-        console.error(error);
+        container.appendChild(message);
     }
 }
 
+/* ---------------- INITIAL LOAD ---------------- */
 
+applyTheme();
 loadRooms();
-
-setInterval(
-    loadRooms,
-    5000
-);
 
 </script>
 
 </body>
-
 </html>

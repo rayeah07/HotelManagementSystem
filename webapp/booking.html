@@ -1,442 +1,710 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>New Booking | Grand Stay</title>
+    <link rel="stylesheet" href="/css/style.css">
 
-    <meta name="viewport"
-          content="width=device-width, initial-scale=1">
-
-    <title>New Booking - Grand Stay</title>
-
-    <link rel="stylesheet"
-          href="/css/style.css">
-
-    <script>
-
-        if (
-            localStorage.getItem("grandStayTheme")
-            === "dark"
-        ) {
-
-            document.documentElement
-                    .classList.add("dark-mode");
+    <style>
+        .booking-layout {
+            display: grid;
+            grid-template-columns: minmax(0, 1.5fr) minmax(260px, .8fr);
+            gap: 20px;
+            align-items: start;
         }
 
-    </script>
+        .booking-form-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 25px;
+            box-shadow: var(--shadow);
+        }
 
+        .booking-card-heading {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 15px;
+            margin-bottom: 22px;
+        }
+
+        .booking-card-heading h2 {
+            margin: 0;
+            font-size: 21px;
+        }
+
+        .booking-step {
+            width: 42px;
+            height: 42px;
+            display: grid;
+            place-items: center;
+            border-radius: 12px;
+            background: var(--accent-light);
+            color: var(--accent);
+            font-weight: 800;
+        }
+
+        .booking-field {
+            margin-bottom: 17px;
+        }
+
+        .booking-field label {
+            display: block;
+            font-size: 13px;
+            font-weight: 700;
+            margin-bottom: 7px;
+        }
+
+        .booking-field input,
+        .booking-field select {
+            width: 100%;
+            min-height: 44px;
+            padding: 11px 12px;
+            border: 1px solid var(--border);
+            border-radius: 9px;
+            background: var(--surface2);
+            color: var(--text);
+            outline: none;
+        }
+
+        .booking-field input:focus,
+        .booking-field select:focus {
+            border-color: var(--accent);
+        }
+
+        .booking-total {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin: 22px 0;
+            padding: 17px;
+            background: var(--accent-light);
+            border-radius: 11px;
+        }
+
+        .booking-total span {
+            color: var(--muted);
+            font-size: 13px;
+        }
+
+        .booking-total strong {
+            font-size: 24px;
+        }
+
+        .booking-submit {
+            width: 100%;
+            min-height: 46px;
+            border: 0;
+            border-radius: 9px;
+            background: var(--primary);
+            color: #fff;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .booking-submit:disabled {
+            opacity: .6;
+            cursor: wait;
+        }
+
+        .booking-message {
+            margin: 12px 0 0;
+            font-size: 13px;
+            color: var(--danger);
+        }
+
+        .booking-info {
+            display: grid;
+            gap: 16px;
+        }
+
+        .booking-info-card {
+            padding: 22px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 15px;
+            box-shadow: var(--shadow);
+        }
+
+        .booking-info-card h3 {
+            margin: 0 0 9px;
+            font-size: 17px;
+        }
+
+        .booking-info-card p {
+            margin: 0;
+            color: var(--muted);
+            line-height: 1.6;
+            font-size: 13px;
+        }
+
+        .booking-info-icon {
+            width: 42px;
+            height: 42px;
+            display: grid;
+            place-items: center;
+            background: var(--accent-light);
+            color: var(--accent);
+            border-radius: 12px;
+            margin-bottom: 14px;
+            font-size: 20px;
+        }
+
+        .pricing-list {
+            display: grid;
+            gap: 0;
+        }
+
+        .pricing-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border);
+            font-size: 13px;
+        }
+
+        .pricing-row:last-child {
+            border-bottom: 0;
+        }
+
+        .pricing-row span {
+            color: var(--muted);
+        }
+
+        .pricing-row strong {
+            white-space: nowrap;
+        }
+
+        .booking-note {
+            margin-top: 14px;
+            padding: 12px;
+            border-radius: 9px;
+            background: var(--surface2);
+            color: var(--muted);
+            font-size: 12px;
+            line-height: 1.5;
+        }
+
+        @media (max-width: 850px) {
+            .booking-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 500px) {
+            .booking-form-card,
+            .booking-info-card {
+                padding: 17px;
+            }
+        }
+    </style>
 </head>
 
-
 <body>
-
-<div class="app-shell">
-
+<div class="app">
 
     <aside class="sidebar">
-
         <div class="brand">
-            GRAND STAY
-            <span>HOTEL</span>
+            <div class="brand-logo">GS</div>
+            <div>
+                <strong>Grand Stay</strong>
+                <span>HOTEL</span>
+            </div>
         </div>
 
-
         <nav>
-
             <a href="/dashboard.html">
-                <span>⌂</span>
-                Dashboard
+                <span>⌂</span> Dashboard
             </a>
 
             <a href="/rooms.html">
-                <span>▦</span>
-                Rooms
+                <span>▦</span> Rooms
             </a>
 
-            <a class="active"
-               href="/booking.html">
-                <span>＋</span>
-                New Booking
+            <a class="active" href="/booking.html">
+                <span>＋</span> New Booking
             </a>
 
             <a href="/bookings.html">
-                <span>☷</span>
-                Booking History
+                <span>☷</span> Booking History
             </a>
 
             <a href="/settings.html">
-                <span>⚙</span>
-                Settings
+                <span>⚙</span> Settings
             </a>
-
         </nav>
 
+        <div class="sidebar-bottom">
+            <div class="hotel-info">
+                <strong>Grand Stay Hotel</strong>
+                <small class="hotel-count">8 Floors · 24 Rooms</small>
+            </div>
+            <a href="/" class="logout">Logout</a>
+        </div>
     </aside>
-
 
     <main class="main">
 
-
-        <div class="topbar">
-
+        <header class="topbar">
             <div>
+                <p class="eyebrow">RESERVATIONS</p>
+                <h1>New Booking</h1>
+            </div>
+            <div class="date-box">
+                GRAND STAY <span>●</span> RESERVATIONS
+            </div>
+        </header>
 
-                <p class="eyebrow">
-                    RESERVATIONS
-                </p>
+        <div class="page">
 
-                <h1>
-                    New Booking
-                </h1>
-
+            <div class="page-head">
+                <div>
+                    <p class="eyebrow">GUEST MANAGEMENT</p>
+                    <h1>Create a Reservation</h1>
+                    <p>Enter guest details and select an available room.</p>
+                </div>
+                <a href="/bookings.html" class="btn secondary">
+                    View Booking History
+                </a>
             </div>
 
+            <div class="booking-layout">
 
-            <button
-                class="theme-btn"
-                onclick="toggleTheme()">
+                <section class="booking-form-card">
 
-                ☾
+                    <div class="booking-card-heading">
+                        <div>
+                            <p class="eyebrow">GUEST DETAILS</p>
+                            <h2>Reservation Information</h2>
+                        </div>
+                        <div class="booking-step">01</div>
+                    </div>
 
-            </button>
+                    <form action="/book" method="POST" id="bookingForm">
 
+                        <div class="booking-field">
+                            <label for="guestName">Guest Name</label>
+                            <input
+                                type="text"
+                                id="guestName"
+                                name="name"
+                                placeholder="Enter guest full name"
+                                autocomplete="name"
+                                maxlength="100"
+                                required
+                            >
+                        </div>
+
+                        <div class="booking-field">
+                            <label for="phone">Phone Number</label>
+                            <input
+                                type="tel"
+                                id="phone"
+                                name="phone"
+                                placeholder="Enter phone number"
+                                autocomplete="tel"
+                                maxlength="20"
+                                required
+                            >
+                        </div>
+
+                        <div class="booking-field">
+                            <label for="roomSelect">Select Available Room</label>
+                            <select
+                                name="room"
+                                id="roomSelect"
+                                required
+                            >
+                                <option value="">Loading available rooms...</option>
+                            </select>
+                        </div>
+
+                        <div class="booking-field">
+                            <label for="days">Number of Days</label>
+                            <input
+                                type="number"
+                                name="days"
+                                id="days"
+                                min="1"
+                                max="365"
+                                value="1"
+                                required
+                            >
+                        </div>
+
+                        <div class="booking-total">
+                            <span>Estimated Booking Total</span>
+                            <strong id="total">₹0</strong>
+                        </div>
+
+                        <button
+                            type="submit"
+                            class="booking-submit"
+                            id="confirmButton"
+                            disabled
+                        >
+                            Confirm Booking
+                        </button>
+
+                        <p
+                            id="bookingMessage"
+                            class="booking-message"
+                            role="status"
+                            aria-live="polite"
+                        ></p>
+
+                    </form>
+                </section>
+
+                <aside class="booking-info">
+
+                    <div class="booking-info-card">
+                        <div class="booking-info-icon">✦</div>
+                        <h3>Welcome to Grand Stay</h3>
+                        <p>
+                            Create a comfortable stay for every guest.
+                            Select an available room and confirm the
+                            reservation after reviewing the estimated total.
+                        </p>
+                    </div>
+
+                    <div class="booking-info-card">
+                        <p class="eyebrow">ROOM CATEGORIES</p>
+                        <h3>Room Pricing</h3>
+
+                        <div id="pricingList" class="pricing-list">
+                            <p>Loading room prices...</p>
+                        </div>
+
+                        <div class="booking-note">
+                            The estimated amount is calculated using the
+                            selected room's configured nightly price and
+                            the number of days entered.
+                        </div>
+                    </div>
+
+                </aside>
+
+            </div>
         </div>
-
-
-        <section class="form-layout">
-
-
-            <div class="card">
-
-                <p class="eyebrow">
-                    GUEST DETAILS
-                </p>
-
-                <h2>
-                    Create reservation
-                </h2>
-
-
-                <form
-                    method="POST"
-                    action="/book"
-                    class="main-form">
-
-
-                    <label>
-                        Guest Name
-                    </label>
-
-                    <input
-                        type="text"
-                        name="name"
-                        placeholder="Enter guest name"
-                        required>
-
-
-                    <label>
-                        Phone Number
-                    </label>
-
-                    <input
-                        type="text"
-                        name="phone"
-                        placeholder="Enter phone number"
-                        required>
-
-
-                    <label>
-                        Room
-                    </label>
-
-                    <select
-                        name="roomNumber"
-                        id="roomNumber"
-                        required>
-
-                        <option value="">
-                            Loading available rooms...
-                        </option>
-
-                    </select>
-
-
-                    <label>
-                        Number of Nights
-                    </label>
-
-                    <input
-                        type="number"
-                        name="days"
-                        id="days"
-                        min="1"
-                        value="1"
-                        required>
-
-
-                    <div class="booking-preview">
-
-                        <span>
-                            Estimated room total
-                        </span>
-
-                        <strong id="previewTotal">
-                            ₹0.00
-                        </strong>
-
-                    </div>
-
-
-                    <button
-                        type="submit"
-                        class="btn primary full">
-
-                        Confirm Booking
-
-                    </button>
-
-
-                </form>
-
-            </div>
-
-
-            <div class="card booking-info">
-
-                <p class="eyebrow">
-                    ROOM INFORMATION
-                </p>
-
-                <h2>
-                    Current rates
-                </h2>
-
-
-                <div class="price-info">
-
-                    <div>
-
-                        <span>
-                            Single Room
-                        </span>
-
-                        <strong>
-                            ₹1,500
-                        </strong>
-
-                        <small>
-                            per night
-                        </small>
-
-                    </div>
-
-
-                    <div>
-
-                        <span>
-                            Deluxe Room
-                        </span>
-
-                        <strong>
-                            ₹4,000
-                        </strong>
-
-                        <small>
-                            per night
-                        </small>
-
-                    </div>
-
-                </div>
-
-
-                <div class="info-note">
-
-                    <strong>
-                        24 rooms
-                    </strong>
-
-                    <p>
-                        The hotel has 8 floors
-                        with 3 rooms on each floor.
-                    </p>
-
-                </div>
-
-            </div>
-
-
-        </section>
-
-
     </main>
-
 </div>
 
+<button
+    type="button"
+    class="theme-btn"
+    id="themeToggle"
+    aria-label="Switch colour theme"
+>
+    🌙 Dark Mode
+</button>
 
 <script>
+"use strict";
 
-function toggleTheme() {
+/* THEME */
 
-    const dark =
-        document.documentElement
-                .classList.toggle(
-                    "dark-mode"
-                );
+function applyTheme(theme) {
+    const dark = theme === "dark";
 
-    localStorage.setItem(
-        "grandStayTheme",
-        dark ? "dark" : "light"
-    );
+    document.documentElement.classList.toggle("dark-mode", dark);
+    localStorage.setItem("grandStayTheme", theme);
+
+    const button = document.getElementById("themeToggle");
+
+    if (button) {
+        button.textContent = dark ? "☀️ Light Mode" : "🌙 Dark Mode";
+    }
+}
+
+applyTheme(localStorage.getItem("grandStayTheme") || "light");
+
+document.getElementById("themeToggle").addEventListener("click", () => {
+    const current = localStorage.getItem("grandStayTheme") || "light";
+    applyTheme(current === "dark" ? "light" : "dark");
+});
+
+
+/* ELEMENTS */
+
+const roomSelect = document.getElementById("roomSelect");
+const daysInput = document.getElementById("days");
+const totalElement = document.getElementById("total");
+const pricingList = document.getElementById("pricingList");
+const bookingMessage = document.getElementById("bookingMessage");
+const confirmButton = document.getElementById("confirmButton");
+
+let selectedPrice = 0;
+let roomsLoaded = false;
+
+
+/* HELPERS */
+
+function formatCurrency(value) {
+    const amount = Number(value);
+
+    if (!Number.isFinite(amount)) {
+        return "₹0";
+    }
+
+    return "₹" + amount.toLocaleString("en-IN", {
+        maximumFractionDigits: 2
+    });
+}
+
+function showMessage(message) {
+    bookingMessage.textContent = message || "";
+}
+
+function updateHotelCount(rooms) {
+    const floorNumbers = rooms
+        .map(room => Number(room.floor))
+        .filter(Number.isFinite);
+
+    const floorCount = floorNumbers.length
+        ? new Set(floorNumbers).size
+        : 0;
+
+    document.querySelectorAll(".hotel-count").forEach(element => {
+        element.textContent =
+            `${floorCount} Floors · ${rooms.length} Rooms`;
+    });
 }
 
 
-let rooms = [];
+/* TOTAL CALCULATION */
 
+function updateTotal() {
+    const days = Number(daysInput.value);
+    const total = selectedPrice * days;
+
+    totalElement.textContent =
+        Number.isFinite(total) && total >= 0
+            ? formatCurrency(total)
+            : "₹0";
+}
+
+function updateSelectedRoom() {
+    const option = roomSelect.options[roomSelect.selectedIndex];
+
+    selectedPrice = Number(option?.dataset.price || 0);
+
+    if (!Number.isFinite(selectedPrice)) {
+        selectedPrice = 0;
+    }
+
+    confirmButton.disabled =
+        !roomsLoaded || !roomSelect.value || selectedPrice <= 0;
+
+    updateTotal();
+}
+
+
+/* PRICING LIST */
+
+function renderPricing(rooms) {
+    pricingList.replaceChildren();
+
+    const prices = new Map();
+
+    rooms.forEach(room => {
+        const type = room.roomType || "Room";
+        const price = Number(room.price);
+
+        if (Number.isFinite(price) && !prices.has(type)) {
+            prices.set(type, price);
+        }
+    });
+
+    if (prices.size === 0) {
+        const empty = document.createElement("p");
+        empty.textContent = "No room prices available.";
+        pricingList.appendChild(empty);
+        return;
+    }
+
+    prices.forEach((price, type) => {
+        const row = document.createElement("div");
+        row.className = "pricing-row";
+
+        const label = document.createElement("span");
+        label.textContent = type;
+
+        const value = document.createElement("strong");
+        value.textContent = formatCurrency(price) + "/night";
+
+        row.append(label, value);
+        pricingList.appendChild(row);
+    });
+}
+
+
+/* LOAD AVAILABLE ROOMS */
 
 async function loadRooms() {
+    roomSelect.innerHTML =
+        '<option value="">Loading available rooms...</option>';
 
-    const select =
-        document.getElementById(
-            "roomNumber"
-        );
-
+    confirmButton.disabled = true;
+    roomsLoaded = false;
+    showMessage("");
 
     try {
+        const response = await fetch("/available-rooms", {
+            method: "GET",
+            headers: {
+                "Accept": "application/json"
+            },
+            cache: "no-store"
+        });
 
-        const response =
-            await fetch(
-                "/available-rooms?x=" +
-                Date.now()
+        if (!response.ok) {
+            throw new Error("Unable to fetch available rooms.");
+        }
+
+        const rooms = await response.json();
+
+        if (!Array.isArray(rooms)) {
+            throw new Error(
+                rooms.error || "Invalid room data received."
             );
+        }
 
-
-        rooms =
-            await response.json();
-
-
-        select.innerHTML =
-            '<option value="">Select a room</option>';
-
-
-        rooms.forEach(
-            room => {
-
-                const option =
-                    document.createElement(
-                        "option"
-                    );
-
-
-                option.value =
-                    room.roomNumber;
-
-
-                option.dataset.price =
-                    room.price;
-
-
-                option.textContent =
-                    "Room " +
-                    room.roomNumber +
-                    " · " +
-                    room.roomType +
-                    " · ₹" +
-                    Number(
-                        room.price
-                    ).toLocaleString(
-                        "en-IN"
-                    ) +
-                    "/night";
-
-
-                select.appendChild(
-                    option
-                );
-            }
+        const availableRooms = rooms.filter(room =>
+            room.available === true ||
+            room.available === 1 ||
+            room.available === "true"
         );
 
+        updateHotelCount(rooms);
+        renderPricing(rooms);
 
-        updateTotal();
+        roomSelect.replaceChildren();
 
+        const firstOption = document.createElement("option");
+        firstOption.value = "";
+        firstOption.textContent = availableRooms.length
+            ? "Select an available room"
+            : "No available rooms";
+
+        roomSelect.appendChild(firstOption);
+
+        availableRooms.forEach(room => {
+            const roomNumber = Number(room.roomNumber);
+            const price = Number(room.price);
+
+            if (
+                !Number.isInteger(roomNumber) ||
+                !Number.isFinite(price) ||
+                price <= 0
+            ) {
+                return;
+            }
+
+            const option = document.createElement("option");
+
+            option.value = String(roomNumber);
+            option.dataset.price = String(price);
+
+            const roomType = room.roomType || "Room";
+
+            option.textContent =
+                `Room ${roomNumber} — ${roomType} — ` +
+                `${formatCurrency(price)}/night`;
+
+            roomSelect.appendChild(option);
+        });
+
+        roomsLoaded = true;
+
+        const requestedRoom =
+            new URLSearchParams(window.location.search).get("room");
+
+        if (
+            requestedRoom &&
+            Array.from(roomSelect.options).some(
+                option => option.value === requestedRoom
+            )
+        ) {
+            roomSelect.value = requestedRoom;
+        }
+
+        updateSelectedRoom();
+
+        if (availableRooms.length === 0) {
+            showMessage("There are currently no available rooms.");
+        }
 
     } catch (error) {
+        console.error("Room loading error:", error);
 
-        select.innerHTML =
-            '<option value="">Unable to load rooms</option>';
+        roomSelect.innerHTML =
+            '<option value="">Unable to load available rooms</option>';
 
-        console.error(error);
+        pricingList.textContent =
+            "Unable to load room prices.";
+
+        showMessage(
+            "Unable to load available rooms. Please refresh the page."
+        );
+
+        confirmButton.disabled = true;
     }
 }
 
 
-function updateTotal() {
+/* FORM EVENTS */
 
-    const select =
-        document.getElementById(
-            "roomNumber"
-        );
+roomSelect.addEventListener("change", updateSelectedRoom);
+daysInput.addEventListener("input", updateTotal);
 
+document.getElementById("bookingForm").addEventListener(
+    "submit",
+    event => {
+        const days = Number(daysInput.value);
+        const room = roomSelect.value;
+        const name = document.getElementById("guestName").value.trim();
+        const phone = document.getElementById("phone").value.trim();
 
-    const days =
-        Number(
-            document.getElementById(
-                "days"
-            ).value || 0
-        );
+        if (!roomsLoaded || !room) {
+            event.preventDefault();
+            showMessage("Please select an available room.");
+            return;
+        }
 
+        if (!name || !phone) {
+            event.preventDefault();
+            showMessage("Please enter the guest name and phone number.");
+            return;
+        }
 
-    const option =
-        select.options[
-            select.selectedIndex
-        ];
+        if (!Number.isInteger(days) || days < 1 || days > 365) {
+            event.preventDefault();
+            showMessage("Please enter a valid number of days.");
+            return;
+        }
 
+        if (selectedPrice <= 0) {
+            event.preventDefault();
+            showMessage("The selected room price is invalid.");
+            return;
+        }
 
-    const price =
-        Number(
-            option?.dataset?.price || 0
-        );
-
-
-    const total =
-        price * days;
-
-
-    document.getElementById(
-        "previewTotal"
-    ).textContent =
-
-        "₹" +
-        total.toLocaleString(
-            "en-IN",
-            {
-                minimumFractionDigits: 2
-            }
-        );
-}
-
-
-document.getElementById(
-    "roomNumber"
-).addEventListener(
-    "change",
-    updateTotal
+        confirmButton.disabled = true;
+        confirmButton.textContent = "Processing Booking...";
+        showMessage("");
+    }
 );
 
 
-document.getElementById(
-    "days"
-).addEventListener(
-    "input",
-    updateTotal
-);
-
+/* INITIAL LOAD */
 
 loadRooms();
-
 </script>
 
 </body>
-
 </html>

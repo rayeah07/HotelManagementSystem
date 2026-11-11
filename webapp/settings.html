@@ -1,520 +1,1518 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings | Grand Stay</title>
+    <link rel="stylesheet" href="/css/style.css">
 
-    <meta name="viewport"
-          content="width=device-width, initial-scale=1">
-
-    <title>Settings - Grand Stay</title>
-
-    <link rel="stylesheet"
-          href="/css/style.css">
-
-    <script>
-
-        if (
-            localStorage.getItem("grandStayTheme")
-            === "dark"
-        ) {
-
-            document.documentElement
-                    .classList.add("dark-mode");
+    <style>
+        .settings-content {
+            display: grid;
+            gap: 22px;
+            max-width: 1100px;
         }
 
-    </script>
+        .settings-card {
+            background: var(--card-bg, #202a29);
+            border: 1px solid var(--border-color, #34413e);
+            border-radius: 16px;
+            padding: 25px;
+        }
 
+        .settings-heading {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 15px;
+            margin-bottom: 22px;
+        }
+
+        .settings-heading h2 {
+            margin: 5px 0;
+        }
+
+        .settings-heading p {
+            margin: 5px 0 0;
+            color: var(--muted-text, #a5b0ac);
+        }
+
+        .settings-icon {
+            width: 45px;
+            height: 45px;
+            display: grid;
+            place-items: center;
+            border-radius: 12px;
+            background: rgba(120, 190, 150, .13);
+            color: #83c99e;
+            font-size: 22px;
+            flex-shrink: 0;
+        }
+
+        .theme-options {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 15px;
+        }
+
+        .theme-option {
+            text-align: left;
+            padding: 18px;
+            border: 1px solid var(--border-color, #34413e);
+            border-radius: 12px;
+            background: var(--input-bg, #18211f);
+            color: var(--text-color, #fff);
+            cursor: pointer;
+        }
+
+        .theme-option.selected {
+            border: 2px solid #83c99e;
+            background: rgba(120, 190, 150, .10);
+        }
+
+        .theme-option span {
+            display: block;
+            font-size: 23px;
+            margin-bottom: 10px;
+        }
+
+        .theme-option strong,
+        .theme-option small {
+            display: block;
+        }
+
+        .theme-option small {
+            margin-top: 5px;
+            color: var(--muted-text, #a5b0ac);
+        }
+
+        .price-list {
+            display: grid;
+            gap: 12px;
+        }
+
+        .price-row,
+        .floor-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 15px;
+            padding: 14px;
+            border: 1px solid var(--border-color, #34413e);
+            border-radius: 11px;
+            background: var(--input-bg, #18211f);
+        }
+
+        .price-row strong {
+            flex: 1;
+        }
+
+        .service-name-input {
+            flex: 1;
+            min-width: 150px;
+        }
+
+        .service-price-input {
+            width: 115px;
+            max-width: 25%;
+        }
+
+        .service-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .service-actions button {
+            min-width: 75px;
+        }
+
+        .price-row input {
+            width: 145px;
+            max-width: 40%;
+        }
+
+        .price-row button,
+        .floor-row button {
+            min-width: 75px;
+        }
+
+        .floor-preview {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 14px;
+            margin-bottom: 22px;
+        }
+
+        .floor-stat {
+            padding: 18px;
+            border-radius: 12px;
+            background: var(--input-bg, #18211f);
+            border: 1px solid var(--border-color, #34413e);
+        }
+
+        .floor-stat strong,
+        .floor-stat span {
+            display: block;
+        }
+
+        .floor-stat strong {
+            font-size: 24px;
+            color: #83c99e;
+        }
+
+        .floor-stat span {
+            margin-top: 5px;
+            color: var(--muted-text, #a5b0ac);
+            font-size: 13px;
+        }
+
+        .settings-form {
+            display: grid;
+            gap: 11px;
+            max-width: 520px;
+        }
+
+        .settings-form h3 {
+            margin: 8px 0;
+        }
+
+        .settings-form label {
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .settings-form input {
+            width: 100%;
+        }
+
+        .floor-list-section {
+            margin-top: 28px;
+        }
+
+        .floor-list-section h3 {
+            margin-bottom: 14px;
+        }
+
+        .floor-list {
+            display: grid;
+            gap: 10px;
+        }
+
+        .floor-row small {
+            display: block;
+            margin-top: 4px;
+            color: var(--muted-text, #a5b0ac);
+        }
+
+        .danger-btn {
+            background: #a94343;
+            color: white;
+            border: 0;
+            border-radius: 8px;
+            padding: 9px 13px;
+            cursor: pointer;
+        }
+
+        .danger-btn:hover {
+            background: #c45151;
+        }
+
+        .settings-message {
+            min-height: 20px;
+            margin-top: 12px;
+            font-size: 14px;
+            color: #e7a0a0;
+        }
+
+        .settings-message.success {
+            color: #83c99e;
+        }
+
+        .settings-note {
+            color: var(--muted-text, #a5b0ac);
+            font-size: 14px;
+        }
+
+        .primary-btn:disabled,
+        .secondary-btn:disabled,
+        .danger-btn:disabled {
+            opacity: .6;
+            cursor: not-allowed;
+        }
+
+        .room-tools {
+            display: grid;
+            gap: 18px;
+            margin-top: 22px;
+        }
+
+        .room-tool-card {
+            padding: 18px;
+            border: 1px solid var(--border-color, #34413e);
+            border-radius: 12px;
+            background: var(--input-bg, #18211f);
+        }
+
+        .room-tool-card h3 {
+            margin: 0 0 14px;
+        }
+
+        .room-tool-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 11px;
+        }
+
+        .room-tool-grid label {
+            display: grid;
+            gap: 7px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .room-tool-grid input,
+        .room-tool-grid select {
+            width: 100%;
+            min-width: 0;
+        }
+
+        .room-tool-card button {
+            margin-top: 13px;
+        }
+
+        .inline-note {
+            color: var(--muted-text, #a5b0ac);
+            font-size: 13px;
+            margin: 8px 0 0;
+        }
+
+        @media (max-width: 650px) {
+            .room-tool-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .settings-card {
+                padding: 17px;
+            }
+
+            .theme-options,
+            .floor-preview {
+                grid-template-columns: 1fr;
+            }
+
+            .price-row {
+                flex-wrap: wrap;
+            }
+
+            .price-row strong {
+                flex-basis: 100%;
+            }
+
+            .price-row input {
+                max-width: none;
+                flex: 1;
+            }
+        }
+    </style>
 </head>
 
-
 <body>
-
-<div class="app-shell">
-
+<div class="app">
 
     <aside class="sidebar">
-
         <div class="brand">
-            GRAND STAY
-            <span>HOTEL</span>
+            <div class="brand-logo">GS</div>
+            <div>
+                <strong>Grand Stay</strong>
+                <span>HOTEL</span>
+            </div>
         </div>
 
-
         <nav>
-
-            <a href="/dashboard.html">
-                <span>⌂</span>
-                Dashboard
-            </a>
-
-            <a href="/rooms.html">
-                <span>▦</span>
-                Rooms
-            </a>
-
-            <a href="/booking.html">
-                <span>＋</span>
-                New Booking
-            </a>
-
-            <a href="/bookings.html">
-                <span>☷</span>
-                Booking History
-            </a>
-
-            <a class="active"
-               href="/settings.html">
-                <span>⚙</span>
-                Settings
-            </a>
-
+            <a href="/dashboard.html"><span>⌂</span> Dashboard</a>
+            <a href="/rooms.html"><span>▦</span> Rooms</a>
+            <a href="/booking.html"><span>＋</span> New Booking</a>
+            <a href="/bookings.html"><span>☷</span> Booking History</a>
+            <a class="active" href="/settings.html"><span>⚙</span> Settings</a>
         </nav>
 
+        <div class="sidebar-bottom">
+            <div class="hotel-info">
+                <strong>Grand Stay Hotel</strong>
+                <small class="hotel-count">Loading hotel details...</small>
+            </div>
+            <a href="/" class="logout">Logout</a>
+        </div>
     </aside>
-
 
     <main class="main">
 
-
-        <div class="topbar">
-
+        <header class="topbar">
             <div>
-
-                <p class="eyebrow">
-                    ADMINISTRATION
+                <p class="eyebrow">HOTEL MANAGEMENT</p>
+                <h1>Settings</h1>
+                <p class="settings-note">
+                    Manage your hotel's appearance, prices, floors and account.
                 </p>
-
-                <h1>
-                    Settings
-                </h1>
-
             </div>
+        </header>
 
+        <div class="settings-content">
 
-            <button
-                class="theme-btn"
-                onclick="toggleTheme()">
+            <!-- APPEARANCE -->
+            <section class="settings-card">
+                <div class="settings-heading">
+                    <div>
+                        <p class="eyebrow">APPEARANCE</p>
+                        <h2>Light / Dark Mode</h2>
+                        <p>Choose how Grand Stay looks on your screen.</p>
+                    </div>
+                    <span class="settings-icon">☼</span>
+                </div>
 
-                ☾
+                <div class="theme-options">
+                    <button type="button" class="theme-option" id="lightMode">
+                        <span>☀</span>
+                        <strong>Light Mode</strong>
+                        <small>Use the standard Grand Stay theme.</small>
+                    </button>
 
-            </button>
+                    <button type="button" class="theme-option" id="darkMode">
+                        <span>☾</span>
+                        <strong>Dark Mode</strong>
+                        <small>Use a darker interface.</small>
+                    </button>
+                </div>
+            </section>
+
+            <!-- ROOM PRICING -->
+            <section class="settings-card">
+                <div class="settings-heading">
+                    <div>
+                        <p class="eyebrow">ROOM MANAGEMENT</p>
+                        <h2>Room Pricing</h2>
+                        <p>Update the nightly price of each room type.</p>
+                    </div>
+                    <span class="settings-icon">₹</span>
+                </div>
+
+                <div id="roomPricingList" class="price-list">
+                    <p class="settings-note">Loading room prices...</p>
+                </div>
+
+                <p id="roomPriceMessage" class="settings-message" role="status"></p>
+            </section>
+
+            <!-- SERVICE PRICING -->
+            <section class="settings-card">
+                <div class="settings-heading">
+                    <div>
+                        <p class="eyebrow">ROOM SERVICES</p>
+                        <h2>Service Pricing</h2>
+                        <p>Manage the prices of services offered to guests.</p>
+                    </div>
+                    <span class="settings-icon">✦</span>
+                </div>
+
+                <div id="servicePricingList" class="price-list">
+                    <p class="settings-note">Loading service prices...</p>
+                </div>
+
+                <p id="servicePriceMessage" class="settings-message" role="status"></p>
+
+                <form id="addServiceForm" class="settings-form">
+                    <h3>Add a New Service</h3>
+
+                    <label for="newServiceName">Service Name</label>
+                    <input type="text" id="newServiceName" maxlength="100"
+                           placeholder="Example: Airport Pickup" required>
+
+                    <label for="newServicePrice">Service Price (₹)</label>
+                    <input type="number" id="newServicePrice" min="0" step="0.01"
+                           placeholder="Enter service price" required>
+
+                    <button type="submit" class="primary-btn">Add Service</button>
+                </form>
+            </section>
+
+            <!-- FLOOR MANAGEMENT -->
+            <section class="settings-card">
+                <div class="settings-heading">
+                    <div>
+                        <p class="eyebrow">ROOM MANAGEMENT</p>
+                        <h2>Floor Management</h2>
+                        <p>Add or remove floors from your hotel.</p>
+                    </div>
+                    <span class="settings-icon">▦</span>
+                </div>
+
+                <div class="floor-preview">
+                    <div class="floor-stat">
+                        <strong id="currentFloorText">0</strong>
+                        <span>Hotel Floors</span>
+                    </div>
+
+                    <div class="floor-stat">
+                        <strong id="currentRoomText">0</strong>
+                        <span>Total Rooms</span>
+                    </div>
+                </div>
+
+                <form id="addFloorForm" class="settings-form">
+                    <h3>Add Entire Floor</h3>
+
+                    <label for="floorNumber">Floor Number</label>
+                    <input
+                        type="number"
+                        id="floorNumber"
+                        min="1"
+                        placeholder="Enter floor number"
+                        required
+                    >
+
+                    <label for="floorName">Floor Name</label>
+                    <input
+                        type="text"
+                        id="floorName"
+                        placeholder="Example: Eighth Floor"
+                        required
+                    >
+
+                    <label for="floorRoomsCount">Number of Rooms on This Floor</label>
+                    <input type="number" id="floorRoomsCount" min="1" max="99" value="3" required>
+
+                    <label for="floorRoomType">Room Type for New Rooms</label>
+                    <select id="floorRoomType" required></select>
+
+                    <button type="submit" class="primary-btn" id="addFloorBtn">
+                        ＋ Add Entire Floor
+                    </button>
+                </form>
+
+                <p id="floorMessage" class="settings-message" role="status"></p>
+
+                <div class="room-tools">
+                    <div class="room-tool-card">
+                        <h3>Add Rooms to a Particular Floor</h3>
+                        <form id="addRoomsForm">
+                            <div class="room-tool-grid">
+                                <label>
+                                    Choose Floor
+                                    <select id="roomsFloorSelect" required></select>
+                                </label>
+
+                                <label>
+                                    Number of Rooms
+                                    <input type="number" id="roomsToAdd"
+                                           min="1" max="99" value="1" required>
+                                </label>
+
+                                <label>
+                                    Room Type
+                                    <select id="addRoomType" required></select>
+                                </label>
+                            </div>
+
+                            <button type="submit" class="primary-btn">＋ Add Rooms</button>
+                        </form>
+                    </div>
+
+                    <div class="room-tool-card">
+                        <h3>Add Rooms to Every Floor</h3>
+                        <form id="addEveryFloorForm">
+                            <div class="room-tool-grid">
+                                <label>
+                                    Rooms to Add Per Floor
+                                    <input type="number" id="roomsPerFloor"
+                                           min="1" max="99" value="1" required>
+                                </label>
+
+                                <label>
+                                    Room Type
+                                    <select id="everyFloorRoomType" required></select>
+                                </label>
+                            </div>
+
+                            <p class="inline-note">
+                                The same number of rooms and selected room type will be
+                                added to every existing floor.
+                            </p>
+
+                            <button type="submit" class="primary-btn">
+                                ＋ Add to Every Floor
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- EXISTING FLOORS ONLY: ROOM INVENTORY IS REMOVED -->
+                <div class="floor-list-section">
+                    <h3>Existing Floors</h3>
+                    <div id="floorList" class="floor-list">
+                        <p class="settings-note">Loading floors...</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- PASSWORD -->
+            <section class="settings-card">
+                <div class="settings-heading">
+                    <div>
+                        <p class="eyebrow">ACCOUNT SECURITY</p>
+                        <h2>Change Password</h2>
+                        <p>Update your hotel account password.</p>
+                    </div>
+                    <span class="settings-icon">🔒</span>
+                </div>
+
+                <form id="passwordForm" class="settings-form">
+                    <label for="oldPassword">Current Password</label>
+                    <input
+                        type="password"
+                        id="oldPassword"
+                        name="oldPassword"
+                        placeholder="Enter current password"
+                        autocomplete="current-password"
+                        required
+                    >
+
+                    <label for="newPassword">New Password</label>
+                    <input
+                        type="password"
+                        id="newPassword"
+                        name="newPassword"
+                        placeholder="Enter new password"
+                        minlength="6"
+                        autocomplete="new-password"
+                        required
+                    >
+
+                    <label for="confirmPassword">Confirm New Password</label>
+                    <input
+                        type="password"
+                        id="confirmPassword"
+                        name="confirmPassword"
+                        placeholder="Re-enter new password"
+                        minlength="6"
+                        autocomplete="new-password"
+                        required
+                    >
+
+                    <button type="submit" class="primary-btn" id="passwordButton">
+                        Update Password
+                    </button>
+
+                    <p id="passwordMessage" class="settings-message" role="status"></p>
+                </form>
+            </section>
 
         </div>
-
-
-        <div id="message"></div>
-
-
-        <section class="settings-grid">
-
-
-            <div class="card">
-
-                <p class="eyebrow">
-                    HOTEL FLOORS
-                </p>
-
-                <h2>
-                    Manage floors
-                </h2>
-
-                <p class="muted">
-                    Each new floor contains
-                    two Single rooms and
-                    one Deluxe room.
-                </p>
-
-
-                <button
-                    class="btn primary"
-                    onclick="addFloor()">
-
-                    ＋ Add New Floor
-
-                </button>
-
-
-                <div
-                    id="floorList"
-                    class="floor-list">
-
-                    Loading...
-
-                </div>
-
-            </div>
-
-
-            <div class="card">
-
-                <p class="eyebrow">
-                    SYSTEM
-                </p>
-
-                <h2>
-                    Grand Stay
-                </h2>
-
-
-                <div class="settings-info">
-
-                    <div>
-
-                        <span>
-                            Current rooms
-                        </span>
-
-                        <strong id="roomCount">
-                            -
-                        </strong>
-
-                    </div>
-
-
-                    <div>
-
-                        <span>
-                            Current floors
-                        </span>
-
-                        <strong id="floorCount">
-                            -
-                        </strong>
-
-                    </div>
-
-
-                    <div>
-
-                        <span>
-                            Single room
-                        </span>
-
-                        <strong>
-                            ₹1,500
-                        </strong>
-
-                    </div>
-
-
-                    <div>
-
-                        <span>
-                            Deluxe room
-                        </span>
-
-                        <strong>
-                            ₹4,000
-                        </strong>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-
-        </section>
-
-
     </main>
-
 </div>
 
+<button
+    type="button"
+    class="theme-btn"
+    id="themeToggle"
+    aria-label="Switch colour theme"
+>
+    🌙 Dark Mode
+</button>
 
 <script>
+"use strict";
 
-function toggleTheme() {
+/* ---------------- THEME ---------------- */
 
-    const dark =
-        document.documentElement
-                .classList.toggle(
-                    "dark-mode"
+function applyTheme(theme) {
+    const dark = theme === "dark";
+
+    document.documentElement.classList.toggle("dark-mode", dark);
+    localStorage.setItem("grandStayTheme", theme);
+
+    document.getElementById("lightMode")
+        .classList.toggle("selected", !dark);
+
+    document.getElementById("darkMode")
+        .classList.toggle("selected", dark);
+
+    document.getElementById("themeToggle").textContent =
+        dark ? "☀️ Light Mode" : "🌙 Dark Mode";
+}
+
+applyTheme(localStorage.getItem("grandStayTheme") || "light");
+
+document.getElementById("lightMode").addEventListener("click", () => {
+    applyTheme("light");
+});
+
+document.getElementById("darkMode").addEventListener("click", () => {
+    applyTheme("dark");
+});
+
+document.getElementById("themeToggle").addEventListener("click", () => {
+    const current = localStorage.getItem("grandStayTheme") || "light";
+    applyTheme(current === "dark" ? "light" : "dark");
+});
+
+
+/* ---------------- HELPERS ---------------- */
+
+function showMessage(elementId, message, success = false) {
+    const element = document.getElementById(elementId);
+    element.textContent = message;
+    element.classList.toggle("success", success);
+}
+
+async function postData(url, data) {
+    const response = await fetch(url, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/x-www-form-urlencoded"
+        },
+        body: new URLSearchParams(data)
+    });
+
+    let result;
+
+    try {
+        result = await response.json();
+    } catch {
+        throw new Error("The server returned an invalid response.");
+    }
+
+    if (!response.ok || result.success === false) {
+        throw new Error(result.message || "Request failed.");
+    }
+
+    return result;
+}
+
+
+/* ---------------- LOAD SETTINGS ---------------- */
+
+async function loadSettings() {
+    const roomContainer = document.getElementById("roomPricingList");
+    const serviceContainer = document.getElementById("servicePricingList");
+    const floorContainer = document.getElementById("floorList");
+
+    try {
+        const [settingsResponse, roomsResponse] = await Promise.all([
+            fetch("/pricing-data"),
+            fetch("/all-rooms")
+        ]);
+
+        if (!settingsResponse.ok) {
+            throw new Error("Unable to load settings.");
+        }
+
+        const data = await settingsResponse.json();
+        const roomTypes = Array.isArray(data.roomTypes) ? data.roomTypes : [];
+        const floors = Array.isArray(data.floors) ? data.floors : [];
+
+        let rooms = Array.isArray(data.rooms) ? data.rooms : [];
+
+        if (roomsResponse.ok) {
+            const allRoomsData = await roomsResponse.json();
+
+            if (Array.isArray(allRoomsData)) {
+                rooms = allRoomsData;
+            } else if (allRoomsData && Array.isArray(allRoomsData.rooms)) {
+                rooms = allRoomsData.rooms;
+            }
+        }
+
+        displayRoomPrices(roomTypes);
+        displayServicePrices(
+            Array.isArray(data.services) ? data.services : []
+        );
+
+        populateRoomTypeSelects(roomTypes);
+        populateFloorSelect(floors);
+
+        displayFloors(floors, rooms);
+        await updateCounts(floors, rooms);
+
+    } catch (error) {
+        console.error("Settings loading error:", error);
+
+        roomContainer.textContent = "Unable to load room pricing.";
+        serviceContainer.textContent = "Unable to load service pricing.";
+        floorContainer.textContent = "Unable to load floor information.";
+    }
+}
+
+
+/* ---------------- ROOM PRICES ---------------- */
+
+function displayRoomPrices(roomTypes) {
+    const container = document.getElementById("roomPricingList");
+    container.replaceChildren();
+
+    if (!roomTypes.length) {
+        container.textContent = "No room types found.";
+        return;
+    }
+
+    roomTypes.forEach(room => {
+        const row = document.createElement("form");
+        row.className = "price-row";
+
+        const nameInput = document.createElement("input");
+        nameInput.type = "text";
+        nameInput.value = room.roomType;
+        nameInput.maxLength = 80;
+        nameInput.className = "service-name-input";
+        nameInput.setAttribute("aria-label", "Room type name");
+
+        const priceInput = document.createElement("input");
+        priceInput.type = "number";
+        priceInput.min = "0";
+        priceInput.step = "0.01";
+        priceInput.value = room.price;
+        priceInput.required = true;
+        priceInput.setAttribute(
+            "aria-label",
+            room.roomType + " nightly price"
+        );
+
+        const actions = document.createElement("div");
+        actions.className = "service-actions";
+
+        const save = document.createElement("button");
+        save.type = "submit";
+        save.className = "secondary-btn";
+        save.textContent = "Save Price";
+
+        const rename = document.createElement("button");
+        rename.type = "button";
+        rename.className = "secondary-btn";
+        rename.textContent = "Rename";
+
+        actions.append(save, rename);
+        row.append(nameInput, priceInput, actions);
+
+        row.addEventListener("submit", async event => {
+            event.preventDefault();
+
+            if (
+                priceInput.value.trim() === "" ||
+                Number(priceInput.value) < 0
+            ) {
+                showMessage("roomPriceMessage", "Enter a valid room price.");
+                return;
+            }
+
+            save.disabled = true;
+            save.textContent = "Saving...";
+
+            try {
+                const result = await postData("/update-room-prices", {
+                    roomType: room.roomType,
+                    price: priceInput.value
+                });
+
+                showMessage(
+                    "roomPriceMessage",
+                    result.message || "Room price updated.",
+                    true
                 );
 
-    localStorage.setItem(
-        "grandStayTheme",
-        dark ? "dark" : "light"
-    );
-}
+                save.textContent = "Saved";
 
+            } catch (error) {
+                showMessage("roomPriceMessage", error.message);
+                save.textContent = "Save Price";
 
-function showMessage(
-    text,
-    success
-) {
-
-    document.getElementById(
-        "message"
-    ).innerHTML =
-
-        '<div class="message ' +
-        (
-            success
-                ? "success-message"
-                : "error-message"
-        ) +
-        '">' +
-
-        text +
-
-        '</div>';
-}
-
-
-async function loadFloors() {
-
-    try {
-
-        const response =
-            await fetch(
-                "/all-rooms?x=" +
-                Date.now()
-            );
-
-
-        const rooms =
-            await response.json();
-
-
-        const floors = {};
-
-
-        rooms.forEach(
-            room => {
-
-                if (!floors[room.floor]) {
-
-                    floors[room.floor] =
-                        [];
-                }
-
-
-                floors[room.floor]
-                    .push(room);
+            } finally {
+                save.disabled = false;
             }
-        );
+        });
+
+        rename.addEventListener("click", async () => {
+            const nextName = nameInput.value.trim();
+
+            if (!nextName) {
+                showMessage("roomPriceMessage", "Enter a room type name.");
+                nameInput.focus();
+                return;
+            }
+
+            rename.disabled = true;
+            rename.textContent = "Renaming...";
+
+            try {
+                const result = await postData("/rename-room-type", {
+                    oldRoomType: room.roomType,
+                    newRoomType: nextName
+                });
+
+                showMessage(
+                    "roomPriceMessage",
+                    result.message || "Room type renamed.",
+                    true
+                );
+
+                await loadSettings();
+
+            } catch (error) {
+                showMessage("roomPriceMessage", error.message);
+
+            } finally {
+                rename.disabled = false;
+                rename.textContent = "Rename";
+            }
+        });
+
+        container.appendChild(row);
+    });
+}
 
 
-        document.getElementById(
-            "roomCount"
-        ).textContent =
-            rooms.length;
+/* ---------------- ROOM TYPE DROPDOWNS ---------------- */
+
+function populateRoomTypeSelects(roomTypes) {
+    [
+        "floorRoomType",
+        "addRoomType",
+        "everyFloorRoomType"
+    ].forEach(id => {
+        const select = document.getElementById(id);
+
+        if (!select) return;
+
+        const previous = select.value;
+        select.replaceChildren();
+
+        roomTypes.forEach(type => {
+            const option = document.createElement("option");
+            option.value = type.roomType;
+            option.textContent =
+                `${type.roomType} · ₹${Number(type.price).toLocaleString("en-IN")}`;
+
+            select.appendChild(option);
+        });
+
+        if (roomTypes.some(t => t.roomType === previous)) {
+            select.value = previous;
+        }
+    });
+}
 
 
-        document.getElementById(
-            "floorCount"
-        ).textContent =
-            Object.keys(floors).length;
+/* ---------------- FLOOR DROPDOWN ---------------- */
 
+function populateFloorSelect(floors) {
+    const select = document.getElementById("roomsFloorSelect");
+    const previous = select.value;
 
-        let html = "";
+    select.replaceChildren();
 
+    floors.forEach(floor => {
+        const option = document.createElement("option");
+        option.value = floor.floorNumber;
+        option.textContent =
+            `${floor.floorName || "Floor " + floor.floorNumber} (${floor.floorNumber})`;
 
-        Object.keys(floors)
-            .sort(
-                (a,b) =>
-                    Number(a) -
-                    Number(b)
-            )
-            .forEach(
-                floor => {
+        select.appendChild(option);
+    });
 
-                    html +=
-
-                        '<div class="floor-row">' +
-
-                        '<div>' +
-
-                        '<strong>' +
-                        'Floor ' +
-                        floor +
-                        '</strong>' +
-
-                        '<small>' +
-                        floors[floor]
-                            .map(
-                                r =>
-                                    r.roomNumber
-                            )
-                            .join(", ") +
-
-                        '</small>' +
-
-                        '</div>' +
-
-                        '<button ' +
-                        'class="btn danger" ' +
-                        'onclick="deleteFloor(' +
-                        floor +
-                        ')">' +
-
-                        'Delete' +
-
-                        '</button>' +
-
-                        '</div>';
-                }
-            );
-
-
-        document.getElementById(
-            "floorList"
-        ).innerHTML =
-            html;
-
-
-    } catch (error) {
-
-        document.getElementById(
-            "floorList"
-        ).innerHTML =
-            '<div class="empty">' +
-            'Unable to load floors.' +
-            '</div>';
+    if (floors.some(f => String(f.floorNumber) === previous)) {
+        select.value = previous;
     }
 }
 
 
-async function addFloor() {
+/* ---------------- SERVICE PRICES ---------------- */
 
-    if (
-        !confirm(
-            "Add a new floor with 3 rooms?"
-        )
-    ) {
+function displayServicePrices(services) {
+    const container = document.getElementById("servicePricingList");
+    container.replaceChildren();
 
+    if (!services.length) {
+        const empty = document.createElement("p");
+        empty.className = "settings-note";
+        empty.textContent = "No services have been added yet.";
+        container.appendChild(empty);
         return;
     }
 
+    services.forEach(service => {
+        const serviceName =
+            service.serviceName || service.name || "Service";
 
-    try {
+        const row = document.createElement("form");
+        row.className = "price-row";
 
-        const response =
-            await fetch(
-                "/add-floor",
-                {
-                    method: "POST"
-                }
-            );
+        const nameInput = document.createElement("input");
+        nameInput.type = "text";
+        nameInput.className = "service-name-input";
+        nameInput.value = serviceName;
+        nameInput.maxLength = 100;
+        nameInput.required = true;
+        nameInput.setAttribute("aria-label", "Service name");
 
+        const priceInput = document.createElement("input");
+        priceInput.type = "number";
+        priceInput.className = "service-price-input";
+        priceInput.min = "0";
+        priceInput.step = "0.01";
+        priceInput.value = service.price;
+        priceInput.required = true;
+        priceInput.setAttribute("aria-label", serviceName + " price");
 
-        const data =
-            await response.json();
+        const actions = document.createElement("div");
+        actions.className = "service-actions";
 
+        const saveButton = document.createElement("button");
+        saveButton.type = "submit";
+        saveButton.className = "secondary-btn";
+        saveButton.textContent = "Save Price";
 
-        if (!data.success) {
+        const renameButton = document.createElement("button");
+        renameButton.type = "button";
+        renameButton.className = "secondary-btn";
+        renameButton.textContent = "Rename";
 
-            throw new Error(
-                data.message
-                    || "Could not add floor."
-            );
-        }
+        const deleteButton = document.createElement("button");
+        deleteButton.type = "button";
+        deleteButton.className = "danger-btn";
+        deleteButton.textContent = "Delete";
 
+        actions.append(saveButton, renameButton, deleteButton);
+        row.append(nameInput, priceInput, actions);
 
-        showMessage(
-            "Floor " +
-            data.floor +
-            " added successfully.",
-            true
-        );
+        row.addEventListener("submit", async event => {
+            event.preventDefault();
 
+            if (
+                Number(priceInput.value) < 0 ||
+                priceInput.value.trim() === ""
+            ) {
+                showMessage(
+                    "servicePriceMessage",
+                    "Enter a valid service price."
+                );
+                return;
+            }
 
-        loadFloors();
+            saveButton.disabled = true;
+            saveButton.textContent = "Saving...";
 
+            try {
+                const result = await postData("/update-service-price", {
+                    serviceName: serviceName,
+                    price: priceInput.value
+                });
 
-    } catch (error) {
+                showMessage(
+                    "servicePriceMessage",
+                    result.message || "Service price updated successfully.",
+                    true
+                );
 
-        showMessage(
-            error.message,
-            false
-        );
-    }
+                saveButton.textContent = "Saved";
+
+            } catch (error) {
+                showMessage("servicePriceMessage", error.message);
+                saveButton.textContent = "Save Price";
+
+            } finally {
+                saveButton.disabled = false;
+            }
+        });
+
+        renameButton.addEventListener("click", async () => {
+            const newName = nameInput.value.trim();
+
+            if (!newName) {
+                showMessage("servicePriceMessage", "Enter a service name.");
+                nameInput.focus();
+                return;
+            }
+
+            renameButton.disabled = true;
+            renameButton.textContent = "Renaming...";
+
+            try {
+                const result = await postData("/rename-service", {
+                    oldServiceName: serviceName,
+                    newServiceName: newName
+                });
+
+                showMessage(
+                    "servicePriceMessage",
+                    result.message || "Service renamed successfully.",
+                    true
+                );
+
+                await loadSettings();
+
+            } catch (error) {
+                showMessage("servicePriceMessage", error.message);
+
+            } finally {
+                renameButton.disabled = false;
+                renameButton.textContent = "Rename";
+            }
+        });
+
+        deleteButton.addEventListener("click", async () => {
+            if (!confirm(
+                "Remove '" + serviceName + "' from the available services? " +
+                "Past booking records and invoices will be kept."
+            )) {
+                return;
+            }
+
+            deleteButton.disabled = true;
+            deleteButton.textContent = "Deleting...";
+
+            try {
+                const result = await postData("/delete-service", {
+                    serviceName: serviceName
+                });
+
+                showMessage(
+                    "servicePriceMessage",
+                    result.message || "Service deleted successfully.",
+                    true
+                );
+
+                await loadSettings();
+
+            } catch (error) {
+                showMessage("servicePriceMessage", error.message);
+                deleteButton.disabled = false;
+                deleteButton.textContent = "Delete";
+            }
+        });
+
+        container.appendChild(row);
+    });
 }
 
 
-async function deleteFloor(floor) {
+/* ---------------- ADD NEW SERVICE ---------------- */
 
-    if (
-        !confirm(
-            "Delete Floor " +
-            floor +
-            "? Historical bookings on this floor will also be removed."
-        )
-    ) {
+document.getElementById("addServiceForm").addEventListener(
+    "submit",
+    async event => {
+        event.preventDefault();
 
+        const serviceName =
+            document.getElementById("newServiceName").value.trim();
+
+        const price =
+            document.getElementById("newServicePrice").value;
+
+        const button =
+            event.currentTarget.querySelector("button[type='submit']");
+
+        if (!serviceName || price.trim() === "" || Number(price) < 0) {
+            showMessage(
+                "servicePriceMessage",
+                "Enter a valid service name and price."
+            );
+            return;
+        }
+
+        button.disabled = true;
+        button.textContent = "Adding...";
+
+        try {
+            const result = await postData("/add-service", {
+                serviceName,
+                price
+            });
+
+            event.currentTarget.reset();
+
+            showMessage(
+                "servicePriceMessage",
+                result.message || "Service added successfully.",
+                true
+            );
+
+            await loadSettings();
+
+        } catch (error) {
+            showMessage("servicePriceMessage", error.message);
+
+        } finally {
+            button.disabled = false;
+            button.textContent = "Add Service";
+        }
+    }
+);
+
+
+/* ---------------- DISPLAY EXISTING FLOORS ---------------- */
+
+function displayFloors(floors, rooms) {
+    const container = document.getElementById("floorList");
+    container.replaceChildren();
+
+    if (!floors.length) {
+        container.textContent = "No floors found.";
         return;
     }
 
+    floors.forEach(floor => {
+        const row = document.createElement("div");
+        row.className = "floor-row";
 
+        const details = document.createElement("div");
+
+        const name = document.createElement("strong");
+        name.textContent =
+            floor.floorName || `Floor ${floor.floorNumber}`;
+
+        const number = document.createElement("small");
+
+        const count = rooms.filter(room =>
+            Number(room.floor ?? room.floorNumber) ===
+            Number(floor.floorNumber)
+        ).length;
+
+        number.textContent =
+            `Floor ${floor.floorNumber} · ${count} rooms`;
+
+        details.append(name, number);
+
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "danger-btn";
+        button.textContent = "Delete Floor";
+
+        button.addEventListener("click", () => {
+            deleteFloor(floor.floorNumber, button);
+        });
+
+        row.append(details, button);
+        container.appendChild(row);
+    });
+}
+
+
+/* ---------------- UPDATE ROOM AND FLOOR COUNTS ---------------- */
+
+async function updateCounts(floors, suppliedRooms = null) {
     try {
+        let rooms = suppliedRooms;
 
-        const body =
-            new URLSearchParams();
+        if (!Array.isArray(rooms)) {
+            const response = await fetch("/all-rooms");
 
+            if (!response.ok) {
+                throw new Error("Unable to load rooms.");
+            }
 
-        body.append(
-            "floor",
-            floor
-        );
+            const responseData = await response.json();
 
-
-        const response =
-            await fetch(
-                "/delete-floor",
-                {
-                    method: "POST",
-
-                    headers: {
-                        "Content-Type":
-                            "application/x-www-form-urlencoded"
-                    },
-
-                    body: body.toString()
-                }
-            );
-
-
-        const data =
-            await response.json();
-
-
-        if (!data.success) {
-
-            throw new Error(
-                data.message
-                    || "Could not delete floor."
-            );
+            rooms = Array.isArray(responseData)
+                ? responseData
+                : (
+                    Array.isArray(responseData.rooms)
+                        ? responseData.rooms
+                        : []
+                );
         }
 
+        const roomCount = rooms.length;
 
-        showMessage(
-            "Floor " +
-            floor +
-            " deleted successfully.",
-            true
+        const floorNumbers = floors.map(
+            floor => Number(floor.floorNumber)
         );
 
+        const floorCount = floors.length;
 
-        loadFloors();
+        const maxFloor = floorNumbers.length
+            ? Math.max(...floorNumbers)
+            : 0;
 
+        document.getElementById("currentFloorText").textContent =
+            floorCount;
+
+        document.getElementById("currentRoomText").textContent =
+            roomCount;
+
+        document.querySelectorAll(".hotel-count").forEach(element => {
+            element.textContent =
+                `${maxFloor} Floors · ${roomCount} Rooms`;
+        });
 
     } catch (error) {
-
-        showMessage(
-            error.message,
-            false
-        );
+        console.error("Count loading error:", error);
     }
 }
 
 
-loadFloors();
+/* ---------------- ADD ENTIRE FLOOR ---------------- */
+
+document.getElementById("addFloorForm").addEventListener(
+    "submit",
+    async event => {
+        event.preventDefault();
+
+        const button = document.getElementById("addFloorBtn");
+
+        const floorNumber =
+            document.getElementById("floorNumber").value;
+
+        const floorName =
+            document.getElementById("floorName").value.trim();
+
+        const roomsCount =
+            document.getElementById("floorRoomsCount").value;
+
+        const roomType =
+            document.getElementById("floorRoomType").value;
+
+        if (
+            !floorName ||
+            Number(floorNumber) < 1 ||
+            Number(roomsCount) < 1 ||
+            !roomType
+        ) {
+            showMessage("floorMessage", "Enter valid floor details.");
+            return;
+        }
+
+        button.disabled = true;
+        button.textContent = "Adding Floor...";
+
+        try {
+            const result = await postData("/add-floor", {
+                floorNumber,
+                floorName,
+                roomsCount,
+                roomType
+            });
+
+            showMessage(
+                "floorMessage",
+                result.message ||
+                    `Floor added successfully. ${result.roomsCreated || 0} rooms created.`,
+                true
+            );
+
+            document.getElementById("addFloorForm").reset();
+
+            await loadSettings();
+
+        } catch (error) {
+            showMessage("floorMessage", error.message);
+
+        } finally {
+            button.disabled = false;
+            button.textContent = "＋ Add Entire Floor";
+        }
+    }
+);
+
+
+/* ---------------- ADD ROOMS TO SELECTED FLOOR ---------------- */
+
+document.getElementById("addRoomsForm").addEventListener(
+    "submit",
+    async event => {
+        event.preventDefault();
+
+        const button =
+            event.currentTarget.querySelector("button[type='submit']");
+
+        button.disabled = true;
+        button.textContent = "Adding...";
+
+        try {
+            const result = await postData("/add-rooms", {
+                floorNumber:
+                    document.getElementById("roomsFloorSelect").value,
+
+                roomsCount:
+                    document.getElementById("roomsToAdd").value,
+
+                roomType:
+                    document.getElementById("addRoomType").value
+            });
+
+            showMessage(
+                "floorMessage",
+                result.message || "Rooms added.",
+                true
+            );
+
+            await loadSettings();
+
+        } catch (error) {
+            showMessage("floorMessage", error.message);
+
+        } finally {
+            button.disabled = false;
+            button.textContent = "＋ Add Rooms";
+        }
+    }
+);
+
+
+/* ---------------- ADD ROOMS TO EVERY FLOOR ---------------- */
+
+document.getElementById("addEveryFloorForm").addEventListener(
+    "submit",
+    async event => {
+        event.preventDefault();
+
+        const count =
+            document.getElementById("roomsPerFloor").value;
+
+        const type =
+            document.getElementById("everyFloorRoomType").value;
+
+        if (!confirm(
+            `Add ${count} ${type} room(s) to every existing floor?`
+        )) {
+            return;
+        }
+
+        const button =
+            event.currentTarget.querySelector("button[type='submit']");
+
+        button.disabled = true;
+        button.textContent = "Adding to Floors...";
+
+        try {
+            const result = await postData("/add-rooms-every-floor", {
+                roomsPerFloor: count,
+                roomType: type
+            });
+
+            showMessage(
+                "floorMessage",
+                result.message || "Rooms added to every floor.",
+                true
+            );
+
+            await loadSettings();
+
+        } catch (error) {
+            showMessage("floorMessage", error.message);
+
+        } finally {
+            button.disabled = false;
+            button.textContent = "＋ Add to Every Floor";
+        }
+    }
+);
+
+
+/* ---------------- DELETE FLOOR ---------------- */
+
+async function deleteFloor(floorNumber, button) {
+    const confirmed = confirm(
+        `Are you sure you want to delete Floor ${floorNumber}?\n\n` +
+        "Floors containing booking history cannot be deleted."
+    );
+
+    if (!confirmed) return;
+
+    button.disabled = true;
+    button.textContent = "Deleting...";
+
+    try {
+        const result = await postData("/delete-floor", {
+            floorNumber
+        });
+
+        showMessage(
+            "floorMessage",
+            result.message || "Floor deleted successfully.",
+            true
+        );
+
+        await loadSettings();
+
+    } catch (error) {
+        showMessage("floorMessage", error.message);
+
+    } finally {
+        button.disabled = false;
+        button.textContent = "Delete Floor";
+    }
+}
+
+
+/* ---------------- CHANGE PASSWORD ---------------- */
+
+document.getElementById("passwordForm").addEventListener(
+    "submit",
+    async event => {
+        event.preventDefault();
+
+        const oldPassword =
+            document.getElementById("oldPassword").value;
+
+        const newPassword =
+            document.getElementById("newPassword").value;
+
+        const confirmPassword =
+            document.getElementById("confirmPassword").value;
+
+        const button =
+            document.getElementById("passwordButton");
+
+        if (newPassword.length < 6) {
+            showMessage(
+                "passwordMessage",
+                "New password must contain at least 6 characters."
+            );
+            return;
+        }
+
+        if (newPassword !== confirmPassword) {
+            showMessage(
+                "passwordMessage",
+                "New password and confirmation do not match."
+            );
+            return;
+        }
+
+        button.disabled = true;
+        button.textContent = "Updating...";
+
+        try {
+            const result = await postData("/change-password", {
+                oldPassword,
+                newPassword,
+                confirmPassword
+            });
+
+            showMessage(
+                "passwordMessage",
+                result.message || "Password updated successfully.",
+                true
+            );
+
+            document.getElementById("passwordForm").reset();
+
+        } catch (error) {
+            showMessage("passwordMessage", error.message);
+
+        } finally {
+            button.disabled = false;
+            button.textContent = "Update Password";
+        }
+    }
+);
+
+
+/* ---------------- INITIAL LOAD ---------------- */
+
+loadSettings();
 
 </script>
 
 </body>
-
 </html>

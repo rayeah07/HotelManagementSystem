@@ -1,150 +1,505 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grand Stay | Hotel Management</title>
+    <link rel="stylesheet" href="/css/style.css">
 
-    <meta name="viewport"
-          content="width=device-width, initial-scale=1">
-
-    <title>Grand Stay Hotel</title>
-
-    <link rel="stylesheet"
-          href="/css/style.css">
-
-    <script>
-
-        if (
-            localStorage.getItem("grandStayTheme")
-            === "dark"
-        ) {
-
-            document.documentElement
-                    .classList.add("dark-mode");
+    <style>
+        * {
+            box-sizing: border-box;
         }
 
-    </script>
+        .login-body {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 25px 15px;
+            background:
+                linear-gradient(rgba(8, 17, 15, .78), rgba(8, 17, 15, .88)),
+                url("https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?auto=format&fit=crop&w=1800&q=85")
+                center / cover fixed;
+        }
 
+        .login-wrapper {
+            width: min(100%, 470px);
+        }
+
+        .login-brand {
+            text-align: center;
+            color: #fff;
+            margin-bottom: 25px;
+        }
+
+        .hotel-logo {
+            width: 65px;
+            height: 65px;
+            display: grid;
+            place-items: center;
+            margin: 0 auto 13px;
+            border-radius: 18px;
+            background: #8bc9a0;
+            color: #13251b;
+            font-size: 23px;
+            font-weight: 900;
+            letter-spacing: -1px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, .2);
+        }
+
+        .login-brand h1 {
+            margin: 0;
+            font-size: 20px;
+            letter-spacing: 3px;
+            color: #fff;
+        }
+
+        .login-brand p {
+            margin: 8px 0 0;
+            color: rgba(255, 255, 255, .72);
+            font-size: 12px;
+            letter-spacing: .5px;
+        }
+
+        .login-card {
+            padding: 32px;
+            border: 1px solid rgba(255, 255, 255, .15);
+            border-radius: 17px;
+            background: #fff;
+            box-shadow: 0 22px 70px rgba(0, 0, 0, .3);
+        }
+
+        .auth-heading {
+            text-align: center;
+            margin-bottom: 22px;
+        }
+
+        .auth-heading h2 {
+            margin: 0 0 7px;
+            color: #17251d;
+            font-size: 24px;
+        }
+
+        .login-subtitle {
+            margin: 0;
+            color: #78847d;
+            font-size: 12px;
+        }
+
+        .auth-switch {
+            display: flex;
+            gap: 8px;
+            padding: 5px;
+            margin-bottom: 22px;
+            border-radius: 9px;
+            background: #f1f4f1;
+        }
+
+        .auth-switch button {
+            flex: 1;
+            padding: 11px 8px;
+            border: 0;
+            border-radius: 7px;
+            background: transparent;
+            color: #66736a;
+            font-size: 12px;
+            font-weight: 800;
+            cursor: pointer;
+            transition: .2s ease;
+        }
+
+        .auth-switch button.active {
+            background: #183b2b;
+            color: #fff;
+            box-shadow: 0 3px 9px rgba(0, 0, 0, .12);
+        }
+
+        .auth-panel {
+            display: none;
+        }
+
+        .auth-panel.active {
+            display: block;
+        }
+
+        .auth-panel label {
+            display: block;
+            margin: 15px 0 7px;
+            color: #34433a;
+            font-size: 12px;
+            font-weight: 800;
+        }
+
+        .auth-panel input {
+            display: block;
+            width: 100%;
+            min-height: 44px;
+            padding: 11px 13px;
+            border: 1px solid #dce4dd;
+            border-radius: 8px;
+            outline: none;
+            background: #fbfcfb;
+            color: #17251d;
+            font-size: 13px;
+            transition: border-color .2s ease, box-shadow .2s ease;
+        }
+
+        .auth-panel input:focus {
+            border-color: #43835c;
+            box-shadow: 0 0 0 3px rgba(67, 131, 92, .12);
+        }
+
+        .auth-panel input::placeholder {
+            color: #a2aaa4;
+        }
+
+        .primary-btn {
+            display: block;
+            width: 100%;
+            min-height: 46px;
+            margin-top: 23px;
+            border: 0;
+            border-radius: 8px;
+            background: #183b2b;
+            color: #fff;
+            font-size: 13px;
+            font-weight: 800;
+            cursor: pointer;
+            transition: background .2s ease, transform .2s ease;
+        }
+
+        .primary-btn:hover {
+            background: #24563d;
+            transform: translateY(-1px);
+        }
+
+        .primary-btn:disabled {
+            opacity: .65;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .auth-message {
+            margin: 17px 0 0;
+            color: #87928a;
+            text-align: center;
+            font-size: 11px;
+            line-height: 1.6;
+        }
+
+        .auth-error {
+            display: none;
+            padding: 10px 12px;
+            margin-top: 14px;
+            border: 1px solid #f0c7c4;
+            border-radius: 8px;
+            background: #fff3f2;
+            color: #a33b34;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+
+        .auth-error.visible {
+            display: block;
+        }
+
+        .login-footer {
+            margin-top: 19px;
+            text-align: center;
+            color: rgba(255, 255, 255, .65);
+            font-size: 10px;
+            letter-spacing: .4px;
+        }
+
+        @media (max-width: 480px) {
+            .login-card {
+                padding: 24px 20px;
+            }
+
+            .login-brand h1 {
+                font-size: 17px;
+            }
+        }
+    </style>
 </head>
 
+<body class="login-body">
 
-<body class="login-page">
+<div class="login-wrapper">
 
-<div class="login-image">
+    <header class="login-brand">
+        <div class="hotel-logo">GS</div>
+        <h1>GRAND STAY</h1>
+        <p>HOTEL MANAGEMENT SYSTEM</p>
+    </header>
 
-    <div class="login-overlay">
+    <main class="login-card">
 
-        <div class="login-brand">
-
-            <div class="big-logo">
-                GS
-            </div>
-
-            <div>
-
-                <h1>
-                    GRAND STAY
-                </h1>
-
-                <span>
-                    HOTEL MANAGEMENT
-                </span>
-
-            </div>
-
-        </div>
-
-
-        <div class="login-caption">
-
-            <p class="eyebrow">
-                WELCOME
+        <div class="auth-heading">
+            <h2 id="formHeading">Welcome Back</h2>
+            <p class="login-subtitle" id="formSubtitle">
+                Sign in to manage your hotel.
             </p>
-
-            <h2>
-                Manage your hotel
-                with confidence.
-            </h2>
-
-            <p>
-                A simple and elegant hotel
-                management system for rooms,
-                bookings and guest services.
-            </p>
-
         </div>
 
-    </div>
-
-</div>
-
-
-<div class="login-panel">
-
-    <div class="login-card">
-
-        <div class="mobile-logo">
-            GS
-        </div>
-
-        <p class="eyebrow">
-            ADMIN PORTAL
-        </p>
-
-        <h2>
-            Welcome back
-        </h2>
-
-        <p class="login-subtitle">
-            Sign in to continue to Grand Stay.
-        </p>
-
-
-        <form method="POST"
-              action="/login">
-
-            <label>
-                Username
-            </label>
-
-            <input
-                type="text"
-                name="username"
-                placeholder="Enter username"
-                required>
-
-
-            <label>
-                Password
-            </label>
-
-            <input
-                type="password"
-                name="password"
-                placeholder="Enter password"
-                required>
-
-
+        <div class="auth-switch">
             <button
-                type="submit"
-                class="btn primary full">
-
-                Sign In
-
+                type="button"
+                id="loginTab"
+                class="active"
+                aria-pressed="true">
+                Login
             </button>
 
-        </form>
+            <button
+                type="button"
+                id="registerTab"
+                aria-pressed="false">
+                Register Hotel
+            </button>
+        </div>
 
+        <!-- LOGIN -->
 
-        <p class="login-hint">
-            Administrator access
-        </p>
+        <section id="loginPanel" class="auth-panel active">
 
-    </div>
+            <form action="/login" method="POST" id="loginForm">
+
+                <label for="loginUsername">Username</label>
+                <input
+                    type="text"
+                    id="loginUsername"
+                    name="username"
+                    placeholder="Enter your hotel username"
+                    autocomplete="username"
+                    maxlength="80"
+                    required
+                >
+
+                <label for="loginPassword">Password</label>
+                <input
+                    type="password"
+                    id="loginPassword"
+                    name="password"
+                    placeholder="Enter your password"
+                    autocomplete="current-password"
+                    required
+                >
+
+                <div id="loginError" class="auth-error" role="alert"></div>
+
+                <button type="submit" class="primary-btn" id="loginButton">
+                    Sign In
+                </button>
+
+            </form>
+
+            <p class="auth-message">
+                Sign in using the username and password associated
+                with your hotel account.
+            </p>
+
+        </section>
+
+        <!-- HOTEL REGISTRATION -->
+
+        <section id="registerPanel" class="auth-panel">
+
+            <form action="/register" method="POST" id="registerForm">
+
+                <label for="hotelName">Hotel Name</label>
+                <input
+                    type="text"
+                    id="hotelName"
+                    name="hotelName"
+                    placeholder="Enter your hotel name"
+                    maxlength="150"
+                    autocomplete="organization"
+                    required
+                >
+
+                <label for="registerUsername">Username</label>
+                <input
+                    type="text"
+                    id="registerUsername"
+                    name="username"
+                    placeholder="Create a username"
+                    minlength="4"
+                    maxlength="80"
+                    autocomplete="username"
+                    required
+                >
+
+                <label for="registerEmail">Email Address</label>
+                <input
+                    type="email"
+                    id="registerEmail"
+                    name="email"
+                    placeholder="Enter your email address"
+                    maxlength="150"
+                    autocomplete="email"
+                    required
+                >
+
+                <label for="registerPassword">Password</label>
+                <input
+                    type="password"
+                    id="registerPassword"
+                    name="password"
+                    placeholder="Create a password"
+                    minlength="8"
+                    autocomplete="new-password"
+                    required
+                >
+
+                <label for="confirmPassword">Confirm Password</label>
+                <input
+                    type="password"
+                    id="confirmPassword"
+                    name="confirmPassword"
+                    placeholder="Enter your password again"
+                    minlength="8"
+                    autocomplete="new-password"
+                    required
+                >
+
+                <div id="registerError" class="auth-error" role="alert"></div>
+
+                <button type="submit" class="primary-btn" id="registerButton">
+                    Register Hotel
+                </button>
+
+            </form>
+
+            <p class="auth-message">
+                Create a separate hotel account to manage your
+                rooms, reservations and hotel operations.
+            </p>
+
+        </section>
+
+    </main>
+
+    <footer class="login-footer">
+        © Grand Stay · Hotel Management System
+    </footer>
 
 </div>
 
-</body>
+<script>
+"use strict";
 
+/* ---------------- FORM SWITCHING ---------------- */
+
+const loginPanel = document.getElementById("loginPanel");
+const registerPanel = document.getElementById("registerPanel");
+const loginTab = document.getElementById("loginTab");
+const registerTab = document.getElementById("registerTab");
+
+function showPanel(panel) {
+    const registering = panel === "register";
+
+    loginPanel.classList.toggle("active", !registering);
+    registerPanel.classList.toggle("active", registering);
+
+    loginTab.classList.toggle("active", !registering);
+    registerTab.classList.toggle("active", registering);
+
+    loginTab.setAttribute("aria-pressed", String(!registering));
+    registerTab.setAttribute("aria-pressed", String(registering));
+
+    document.getElementById("formHeading").textContent =
+        registering ? "Register Your Hotel" : "Welcome Back";
+
+    document.getElementById("formSubtitle").textContent =
+        registering
+            ? "Create an account for your hotel."
+            : "Sign in to manage your hotel.";
+
+    clearErrors();
+}
+
+loginTab.addEventListener("click", function () {
+    showPanel("login");
+});
+
+registerTab.addEventListener("click", function () {
+    showPanel("register");
+});
+
+/* ---------------- ERROR MESSAGES ---------------- */
+
+function clearErrors() {
+    document.getElementById("loginError").textContent = "";
+    document.getElementById("registerError").textContent = "";
+
+    document.getElementById("loginError").classList.remove("visible");
+    document.getElementById("registerError").classList.remove("visible");
+}
+
+function showError(elementId, message) {
+    const element = document.getElementById(elementId);
+    element.textContent = message;
+    element.classList.add("visible");
+}
+
+/* ---------------- REGISTRATION VALIDATION ---------------- */
+
+document.getElementById("registerForm").addEventListener(
+    "submit",
+    function (event) {
+        clearErrors();
+
+        const password =
+            document.getElementById("registerPassword").value;
+
+        const confirmPassword =
+            document.getElementById("confirmPassword").value;
+
+        if (password.length < 8) {
+            event.preventDefault();
+            showError(
+                "registerError",
+                "Password must contain at least 8 characters."
+            );
+            return;
+        }
+
+        if (password !== confirmPassword) {
+            event.preventDefault();
+            showError(
+                "registerError",
+                "Passwords do not match. Please try again."
+            );
+        }
+    }
+);
+
+/* ---------------- LOGIN VALIDATION ---------------- */
+
+document.getElementById("loginForm").addEventListener(
+    "submit",
+    function () {
+        clearErrors();
+
+        const button = document.getElementById("loginButton");
+        button.disabled = true;
+        button.textContent = "Signing In...";
+    }
+);
+
+/* ---------------- REGISTRATION BUTTON ---------------- */
+
+document.getElementById("registerForm").addEventListener(
+    "submit",
+    function () {
+        const button = document.getElementById("registerButton");
+        button.disabled = true;
+        button.textContent = "Registering...";
+    }
+);
+</script>
+
+</body>
 </html>
