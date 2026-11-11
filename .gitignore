@@ -5,3 +5,7 @@ pom.xml
 webapp/WEB-INF/
 .idea/
 *.iml
+HotelServer_before_encoding_fix.java
+HotelServer_empty_backup.java
+HotelServer_recovered.java
+hotel_db_backup.sql
