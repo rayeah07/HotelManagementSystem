@@ -1,3 +1,4 @@
+
 package com.hotel;
 
 import com.sun.net.httpserver.HttpExchange;
@@ -13,6 +14,8 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.security.MessageDigest;
+import java.security.SecureRandom;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -21,19 +24,91 @@ import java.sql.Statement;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.PBEKeySpec;
 
 public class HotelServer {
 
     private static final int HOTEL_ID = 1;
 
     private static final Path WEB =
-            Paths.get("webapp")
-                    .toAbsolutePath()
-                    .normalize();
+            Paths.get("webapp").toAbsolutePath().normalize();
+
+    private static final int PASSWORD_ITERATIONS = 120000;
+    private static final int PASSWORD_KEY_LENGTH = 256;
+    private static final int PASSWORD_SALT_LENGTH = 16;
+
+    private static final SecureRandom SECURE_RANDOM =
+            new SecureRandom();
+
+    private static byte[] generateSalt() {
+        byte[] salt = new byte[PASSWORD_SALT_LENGTH];
+        SECURE_RANDOM.nextBytes(salt);
+        return salt;
+    }
+
+    private static String hashPassword(String password, byte[] salt)
+            throws Exception {
+
+        PBEKeySpec spec = new PBEKeySpec(
+                password.toCharArray(),
+                salt,
+                PASSWORD_ITERATIONS,
+                PASSWORD_KEY_LENGTH
+        );
+
+        try {
+            SecretKeyFactory factory =
+                    SecretKeyFactory.getInstance(
+                            "PBKDF2WithHmacSHA256"
+                    );
+
+            byte[] hash = factory.generateSecret(spec).getEncoded();
+
+            return Base64.getEncoder().encodeToString(hash);
+
+        } finally {
+            spec.clearPassword();
+        }
+    }
+
+    private static boolean verifyPassword(
+            String password,
+            String storedHash,
+            String storedSalt) {
+
+        if (password == null ||
+                storedHash == null ||
+                storedSalt == null) {
+            return false;
+        }
+
+        try {
+            byte[] salt = Base64.getDecoder().decode(storedSalt);
+
+            String generatedHash = hashPassword(password, salt);
+
+            byte[] expected =
+                    Base64.getDecoder().decode(storedHash);
+
+            byte[] actual =
+                    Base64.getDecoder().decode(generatedHash);
+
+            return MessageDigest.isEqual(expected, actual);
+
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    // ==================================================
+    // SERVER STARTUP
+    // ==================================================
 
     public static void main(String[] args) throws Exception {
 
@@ -66,8 +141,6 @@ public class HotelServer {
 
     private static void registerRoutes(HttpServer server) {
 
-        // PAGES
-
         server.createContext("/", exchange ->
                 serveFile(exchange, "index.html"));
 
@@ -89,11 +162,7 @@ public class HotelServer {
         server.createContext("/css/style.css", exchange ->
                 serveFile(exchange, "css/style.css"));
 
-        // LOGIN
-
         server.createContext("/login", HotelServer::login);
-
-        // DASHBOARD AND ROOM DATA
 
         server.createContext("/dashboard-data",
                 HotelServer::dashboardData);
@@ -103,8 +172,6 @@ public class HotelServer {
 
         server.createContext("/available-rooms",
                 HotelServer::availableRooms);
-
-        // BOOKINGS
 
         server.createContext("/booking-history",
                 HotelServer::bookingHistory);
@@ -118,23 +185,17 @@ public class HotelServer {
         server.createContext("/checkout",
                 HotelServer::checkout);
 
-        // ROOM SERVICES
-
         server.createContext("/room-service",
                 HotelServer::roomService);
 
         server.createContext("/service-list",
                 HotelServer::serviceList);
 
-        // INVOICES
-
         server.createContext("/invoice",
                 HotelServer::invoice);
 
         server.createContext("/invoice-pdf",
                 HotelServer::invoicePdf);
-
-        // FLOOR AND ROOM MANAGEMENT
 
         server.createContext("/add-floor",
                 HotelServer::addFloor);
@@ -147,8 +208,6 @@ public class HotelServer {
 
         server.createContext("/add-rooms-every-floor",
                 HotelServer::addRoomsEveryFloor);
-
-        // SETTINGS AND PRICING
 
         server.createContext("/pricing-data",
                 HotelServer::pricingData);
@@ -203,8 +262,7 @@ public class HotelServer {
 
     private static Map<String, String> parseForm(String body) {
 
-        Map<String, String> data =
-                new LinkedHashMap<>();
+        Map<String, String> data = new LinkedHashMap<>();
 
         if (body == null || body.isBlank()) {
             return data;
@@ -315,14 +373,9 @@ public class HotelServer {
                 "no-store"
         );
 
-        exchange.sendResponseHeaders(
-                status,
-                bytes.length
-        );
+        exchange.sendResponseHeaders(status, bytes.length);
 
-        try (OutputStream output =
-                     exchange.getResponseBody()) {
-
+        try (OutputStream output = exchange.getResponseBody()) {
             output.write(bytes);
         }
     }
@@ -331,59 +384,39 @@ public class HotelServer {
             HttpExchange exchange,
             String json) throws IOException {
 
-        sendResponse(
-                exchange,
-                "application/json",
-                json,
-                200
-        );
+        sendResponse(exchange, "application/json", json, 200);
     }
 
     private static void sendHtml(
             HttpExchange exchange,
             String html) throws IOException {
 
-        sendResponse(
-                exchange,
-                "text/html",
-                html,
-                200
-        );
+        sendResponse(exchange, "text/html", html, 200);
     }
 
     private static void sendError(
             HttpExchange exchange,
             String message) throws IOException {
 
-        sendJson(
-                exchange,
+        sendJson(exchange,
                 "{\"success\":false,\"message\":\""
-                        + jsonEscape(message)
-                        + "\"}"
-        );
+                        + jsonEscape(message) + "\"}");
     }
 
     private static void sendSuccess(
             HttpExchange exchange,
             String message) throws IOException {
 
-        sendJson(
-                exchange,
+        sendJson(exchange,
                 "{\"success\":true,\"message\":\""
-                        + jsonEscape(message)
-                        + "\"}"
-        );
+                        + jsonEscape(message) + "\"}");
     }
 
     private static void redirect(
             HttpExchange exchange,
             String location) throws IOException {
 
-        exchange.getResponseHeaders().set(
-                "Location",
-                location
-        );
-
+        exchange.getResponseHeaders().set("Location", location);
         exchange.sendResponseHeaders(302, -1);
         exchange.close();
     }
@@ -396,8 +429,7 @@ public class HotelServer {
             HttpExchange exchange,
             String fileName) throws IOException {
 
-        Path file =
-                WEB.resolve(fileName).normalize();
+        Path file = WEB.resolve(fileName).normalize();
 
         if (!file.startsWith(WEB) ||
                 !Files.exists(file) ||
@@ -409,7 +441,6 @@ public class HotelServer {
                     "File not found: " + fileName,
                     404
             );
-
             return;
         }
 
@@ -430,14 +461,9 @@ public class HotelServer {
                 contentType + "; charset=UTF-8"
         );
 
-        exchange.sendResponseHeaders(
-                200,
-                bytes.length
-        );
+        exchange.sendResponseHeaders(200, bytes.length);
 
-        try (OutputStream output =
-                     exchange.getResponseBody()) {
-
+        try (OutputStream output = exchange.getResponseBody()) {
             output.write(bytes);
         }
     }
@@ -450,15 +476,10 @@ public class HotelServer {
             Connection con,
             String query) throws SQLException {
 
-        try (PreparedStatement ps =
-                     con.prepareStatement(query);
+        try (PreparedStatement ps = con.prepareStatement(query);
              ResultSet rs = ps.executeQuery()) {
 
-            if (rs.next()) {
-                return rs.getInt(1);
-            }
-
-            return 0;
+            return rs.next() ? rs.getInt(1) : 0;
         }
     }
 
@@ -466,30 +487,19 @@ public class HotelServer {
             Connection con,
             String query) throws SQLException {
 
-        try (PreparedStatement ps =
-                     con.prepareStatement(query);
+        try (PreparedStatement ps = con.prepareStatement(query);
              ResultSet rs = ps.executeQuery()) {
 
-            if (rs.next()) {
-                return rs.getDouble(1);
-            }
-
-            return 0.0;
+            return rs.next() ? rs.getDouble(1) : 0.0;
         }
     }
 
     private static boolean isPost(HttpExchange exchange) {
-
-        return "POST".equalsIgnoreCase(
-                exchange.getRequestMethod()
-        );
+        return "POST".equalsIgnoreCase(exchange.getRequestMethod());
     }
 
     private static boolean isGet(HttpExchange exchange) {
-
-        return "GET".equalsIgnoreCase(
-                exchange.getRequestMethod()
-        );
+        return "GET".equalsIgnoreCase(exchange.getRequestMethod());
     }
 
     private static String getQueryValue(
@@ -497,19 +507,17 @@ public class HotelServer {
             String key) {
 
         Map<String, String> query =
-                parseForm(
-                        exchange.getRequestURI().getRawQuery()
-                );
+                parseForm(exchange.getRequestURI().getRawQuery());
 
         return query.getOrDefault(key, "");
     }
 
     // ==================================================
-    // LOGIN
+    // LOGIN - PBKDF2 PASSWORD VERIFICATION
     // ==================================================
 
-    private static void login(
-            HttpExchange exchange) throws IOException {
+    private static void login(HttpExchange exchange)
+            throws IOException {
 
         if (!isPost(exchange)) {
             redirect(exchange, "/");
@@ -525,46 +533,61 @@ public class HotelServer {
         String password =
                 data.getOrDefault("password", "");
 
-        try (Connection con =
-                     DatabaseConnection.getConnection();
-             PreparedStatement ps =
-                     con.prepareStatement(
-                             "SELECT hotel_id FROM hotels "
-                                     + "WHERE username=? "
-                                     + "AND password_hash=?"
-                     )) {
+        if (username.isEmpty() || password.isEmpty()) {
+            sendHtml(exchange, messagePage(
+                    "Login Failed",
+                    "Please enter your username and password.",
+                    "/",
+                    "Try Again"
+            ));
+            return;
+        }
+
+        String sql =
+                "SELECT hotel_id,password_hash,password_salt " +
+                "FROM hotels WHERE username=?";
+
+        try (Connection con = DatabaseConnection.getConnection();
+             PreparedStatement ps = con.prepareStatement(sql)) {
 
             ps.setString(1, username);
-            ps.setString(2, password);
 
             try (ResultSet rs = ps.executeQuery()) {
 
-                if (rs.next() && rs.getInt("hotel_id") == HOTEL_ID) {
-                    redirect(exchange, "/dashboard.html");
-                } else {
-                    sendHtml(
-                            exchange,
-                            messagePage(
-                                    "Login Failed",
-                                    "Invalid username or password.",
-                                    "/",
-                                    "Try Again"
-                            )
+                if (rs.next()) {
+
+                    int hotelId = rs.getInt("hotel_id");
+
+                    boolean validPassword = verifyPassword(
+                            password,
+                            rs.getString("password_hash"),
+                            rs.getString("password_salt")
                     );
+
+                    if (validPassword && hotelId == HOTEL_ID) {
+                        redirect(exchange, "/dashboard.html");
+                        return;
+                    }
                 }
+
+                sendHtml(exchange, messagePage(
+                        "Login Failed",
+                        "Invalid username or password.",
+                        "/",
+                        "Try Again"
+                ));
             }
 
         } catch (Exception e) {
 
-            sendHtml(
-                    exchange,
-                    messagePage(
-                            "Login Error",
-                            e.getMessage(),
-                            "/",
-                            "Back"
-                    )
-            );
+            e.printStackTrace();
+
+            sendHtml(exchange, messagePage(
+                    "Login Error",
+                    "Unable to process login. Please check the database connection.",
+                    "/",
+                    "Back"
+            ));
         }
     }
 
@@ -572,8 +595,8 @@ public class HotelServer {
     // DASHBOARD DATA
     // ==================================================
 
-    private static void dashboardData(
-            HttpExchange exchange) throws IOException {
+    private static void dashboardData(HttpExchange exchange)
+            throws IOException {
 
         if (!isGet(exchange)) {
             sendError(exchange, "Invalid request.");
@@ -609,13 +632,13 @@ public class HotelServer {
 
                 StringBuilder json = new StringBuilder();
 
-                json.append("{");
-                json.append("\"totalRooms\":").append(totalRooms).append(",");
-                json.append("\"availableRooms\":").append(availableRooms).append(",");
-                json.append("\"bookedRooms\":").append(totalRooms - availableRooms).append(",");
-                json.append("\"totalBookings\":").append(totalBookings).append(",");
-                json.append("\"revenue\":").append(revenue).append(",");
-                json.append("\"rooms\":[");
+                json.append("{")
+                        .append("\"totalRooms\":").append(totalRooms).append(",")
+                        .append("\"availableRooms\":").append(availableRooms).append(",")
+                        .append("\"bookedRooms\":").append(totalRooms - availableRooms).append(",")
+                        .append("\"totalBookings\":").append(totalBookings).append(",")
+                        .append("\"revenue\":").append(revenue).append(",")
+                        .append("\"rooms\":[");
 
                 String roomSql =
                         "SELECT room_number,floor_number,room_type,price,available " +
@@ -631,10 +654,7 @@ public class HotelServer {
 
                         while (rooms.next()) {
 
-                            if (!first) {
-                                json.append(",");
-                            }
-
+                            if (!first) json.append(",");
                             first = false;
 
                             json.append("{")
@@ -670,10 +690,7 @@ public class HotelServer {
 
                         while (bookings.next()) {
 
-                            if (!first) {
-                                json.append(",");
-                            }
-
+                            if (!first) json.append(",");
                             first = false;
 
                             json.append("{")
@@ -701,22 +718,16 @@ public class HotelServer {
     }
 
     // ==================================================
-    // ALL ROOMS
+    // ROOM LISTS
     // ==================================================
 
     private static void allRooms(HttpExchange exchange)
             throws IOException {
-
         roomList(exchange, false);
     }
 
-    // ==================================================
-    // AVAILABLE ROOMS
-    // ==================================================
-
     private static void availableRooms(HttpExchange exchange)
             throws IOException {
-
         roomList(exchange, true);
     }
 
@@ -751,10 +762,7 @@ public class HotelServer {
 
                 while (rs.next()) {
 
-                    if (!first) {
-                        json.append(",");
-                    }
-
+                    if (!first) json.append(",");
                     first = false;
 
                     json.append("{")
@@ -810,10 +818,7 @@ public class HotelServer {
 
                 while (rs.next()) {
 
-                    if (!first) {
-                        json.append(",");
-                    }
-
+                    if (!first) json.append(",");
                     first = false;
 
                     json.append("{")
@@ -858,12 +863,8 @@ public class HotelServer {
         String phone = data.getOrDefault("phone", "").trim();
 
         int room = intValue(
-                data.getOrDefault(
-                        "roomNumber",
-                        data.getOrDefault("room", "0")
-                ),
-                0
-        );
+                data.getOrDefault("roomNumber",
+                        data.getOrDefault("room", "0")), 0);
 
         int days = intValue(data.get("days"), 0);
 
@@ -877,7 +878,6 @@ public class HotelServer {
             con.setAutoCommit(false);
 
             try {
-
                 double price;
 
                 String roomSql =
@@ -909,8 +909,7 @@ public class HotelServer {
                         "INSERT INTO customers(name,phone,hotel_id) VALUES(?,?,?)";
 
                 try (PreparedStatement ps = con.prepareStatement(
-                        customerSql,
-                        Statement.RETURN_GENERATED_KEYS)) {
+                        customerSql, Statement.RETURN_GENERATED_KEYS)) {
 
                     ps.setString(1, name);
                     ps.setString(2, phone);
@@ -918,17 +917,14 @@ public class HotelServer {
                     ps.executeUpdate();
 
                     try (ResultSet keys = ps.getGeneratedKeys()) {
-
                         if (!keys.next()) {
                             throw new SQLException("Could not create customer.");
                         }
-
                         customerId = keys.getInt(1);
                     }
                 }
 
                 double total = price * days;
-
                 int bookingId;
 
                 String bookingSql =
@@ -937,8 +933,7 @@ public class HotelServer {
                         "VALUES(?,?,?,?, 'ACTIVE',?)";
 
                 try (PreparedStatement ps = con.prepareStatement(
-                        bookingSql,
-                        Statement.RETURN_GENERATED_KEYS)) {
+                        bookingSql, Statement.RETURN_GENERATED_KEYS)) {
 
                     ps.setInt(1, customerId);
                     ps.setInt(2, room);
@@ -948,11 +943,9 @@ public class HotelServer {
                     ps.executeUpdate();
 
                     try (ResultSet keys = ps.getGeneratedKeys()) {
-
                         if (!keys.next()) {
                             throw new SQLException("Could not create booking.");
                         }
-
                         bookingId = keys.getInt(1);
                     }
                 }
@@ -971,14 +964,10 @@ public class HotelServer {
 
                 con.commit();
 
-                redirect(
-                        exchange,
-                        "/bookings.html?success=" +
-                                urlEncode("Booking created successfully. Booking ID: " + bookingId)
-                );
+                redirect(exchange, "/bookings.html?success=" +
+                        urlEncode("Booking created successfully. Booking ID: " + bookingId));
 
             } catch (Exception e) {
-
                 con.rollback();
                 sendError(exchange, e.getMessage());
             }
@@ -1013,7 +1002,6 @@ public class HotelServer {
             con.setAutoCommit(false);
 
             try {
-
                 int roomNumber;
 
                 String selectSql =
@@ -1033,8 +1021,7 @@ public class HotelServer {
 
                         if (!"ACTIVE".equalsIgnoreCase(rs.getString("status"))) {
                             throw new IllegalArgumentException(
-                                    "Only active bookings can be cancelled."
-                            );
+                                    "Only active bookings can be cancelled.");
                         }
 
                         roomNumber = rs.getInt("room_number");
@@ -1061,14 +1048,10 @@ public class HotelServer {
 
                 con.commit();
 
-                redirect(
-                        exchange,
-                        "/bookings.html?success=" +
-                                urlEncode("Booking cancelled successfully.")
-                );
+                redirect(exchange, "/bookings.html?success=" +
+                        urlEncode("Booking cancelled successfully."));
 
             } catch (Exception e) {
-
                 con.rollback();
                 sendError(exchange, e.getMessage());
             }
@@ -1103,7 +1086,6 @@ public class HotelServer {
             con.setAutoCommit(false);
 
             try {
-
                 int roomNumber;
 
                 String selectSql =
@@ -1123,8 +1105,7 @@ public class HotelServer {
 
                         if (!"ACTIVE".equalsIgnoreCase(rs.getString("status"))) {
                             throw new IllegalArgumentException(
-                                    "Only active bookings can be checked out."
-                            );
+                                    "Only active bookings can be checked out.");
                         }
 
                         roomNumber = rs.getInt("room_number");
@@ -1150,11 +1131,9 @@ public class HotelServer {
                 }
 
                 con.commit();
-
                 redirect(exchange, "/invoice?booking_id=" + bookingId);
 
             } catch (Exception e) {
-
                 con.rollback();
                 sendError(exchange, e.getMessage());
             }
@@ -1194,7 +1173,6 @@ public class HotelServer {
             con.setAutoCommit(false);
 
             try {
-
                 String status;
 
                 try (PreparedStatement ps = con.prepareStatement(
@@ -1216,8 +1194,7 @@ public class HotelServer {
 
                 if (!"ACTIVE".equalsIgnoreCase(status)) {
                     throw new IllegalArgumentException(
-                            "Services can only be added to active bookings."
-                    );
+                            "Services can only be added to active bookings.");
                 }
 
                 double price;
@@ -1233,8 +1210,7 @@ public class HotelServer {
 
                         if (!rs.next()) {
                             throw new IllegalArgumentException(
-                                    "This service is not available."
-                            );
+                                    "This service is not available.");
                         }
 
                         price = rs.getDouble("price");
@@ -1254,20 +1230,15 @@ public class HotelServer {
                     ps.setDouble(4, price);
                     ps.setDouble(5, total);
                     ps.setInt(6, HOTEL_ID);
-
                     ps.executeUpdate();
                 }
 
                 con.commit();
 
-                redirect(
-                        exchange,
-                        "/bookings.html?success=" +
-                                urlEncode("Service added successfully.")
-                );
+                redirect(exchange, "/bookings.html?success=" +
+                        urlEncode("Service added successfully."));
 
             } catch (Exception e) {
-
                 con.rollback();
                 sendError(exchange, e.getMessage());
             }
@@ -1290,19 +1261,15 @@ public class HotelServer {
         }
 
         int bookingId = intValue(
-                getQueryValue(exchange, "booking_id"),
-                0
-        );
+                getQueryValue(exchange, "booking_id"), 0);
 
         try (Connection con = DatabaseConnection.getConnection()) {
 
-            // When a booking ID is supplied, return its service history.
             if (bookingId > 0) {
 
                 String sql =
                         "SELECT service_name,quantity,price,total,service_date " +
-                        "FROM room_services " +
-                        "WHERE hotel_id=? AND booking_id=? " +
+                        "FROM room_services WHERE hotel_id=? AND booking_id=? " +
                         "ORDER BY service_id DESC";
 
                 try (PreparedStatement ps = con.prepareStatement(sql)) {
@@ -1317,10 +1284,7 @@ public class HotelServer {
 
                         while (rs.next()) {
 
-                            if (!first) {
-                                json.append(",");
-                            }
-
+                            if (!first) json.append(",");
                             first = false;
 
                             json.append("{")
@@ -1339,7 +1303,6 @@ public class HotelServer {
 
             } else {
 
-                // Without a booking ID, return the service catalogue.
                 String sql =
                         "SELECT service_name,price FROM service_prices " +
                         "WHERE hotel_id=? ORDER BY service_name";
@@ -1355,10 +1318,7 @@ public class HotelServer {
 
                         while (rs.next()) {
 
-                            if (!first) {
-                                json.append(",");
-                            }
-
+                            if (!first) json.append(",");
                             first = false;
 
                             json.append("{")
@@ -1392,9 +1352,7 @@ public class HotelServer {
         }
 
         int bookingId = intValue(
-                getQueryValue(exchange, "booking_id"),
-                0
-        );
+                getQueryValue(exchange, "booking_id"), 0);
 
         if (bookingId <= 0) {
             sendError(exchange, "Invalid booking ID.");
@@ -1452,13 +1410,12 @@ public class HotelServer {
             }
 
             double grandTotal = roomTotal + serviceTotal;
-
             StringBuilder serviceRows = new StringBuilder();
 
             String serviceSql =
                     "SELECT service_name,quantity,price,total " +
-                    "FROM room_services " +
-                    "WHERE hotel_id=? AND booking_id=? ORDER BY service_id";
+                    "FROM room_services WHERE hotel_id=? AND booking_id=? " +
+                    "ORDER BY service_id";
 
             try (PreparedStatement ps = con.prepareStatement(serviceSql)) {
 
@@ -1482,32 +1439,24 @@ public class HotelServer {
             double nightlyRate = days == 0 ? 0 : roomTotal / days;
 
             String html =
-                    "<!DOCTYPE html>" +
-                    "<html><head>" +
+                    "<!DOCTYPE html><html><head>" +
                     "<meta charset='UTF-8'>" +
                     "<title>Invoice #" + bookingId + "</title>" +
                     "<link rel='stylesheet' href='/css/style.css'>" +
                     "</head><body class='invoice-page'>" +
-
                     "<div class='invoice-card'>" +
 
                     "<div class='invoice-head'>" +
                     "<div><div class='invoice-logo'>GS</div>" +
-                    "<h1>Grand Stay Hotel</h1>" +
-                    "<p>Guest Invoice</p></div>" +
+                    "<h1>Grand Stay Hotel</h1><p>Guest Invoice</p></div>" +
                     "<div class='invoice-id'>Invoice #" + bookingId + "</div>" +
                     "</div>" +
 
                     "<div class='invoice-info'>" +
-                    "<div><b>Guest</b><br>" +
-                    esc(name) + "<br>" + esc(phone) + "</div>" +
-
-                    "<div><b>Room</b><br>" +
-                    room + " - " + esc(roomType) +
+                    "<div><b>Guest</b><br>" + esc(name) + "<br>" + esc(phone) + "</div>" +
+                    "<div><b>Room</b><br>" + room + " - " + esc(roomType) +
                     "<br>" + days + " night(s)</div>" +
-
-                    "<div><b>Status</b><br>" +
-                    esc(status) + "<br>" +
+                    "<div><b>Status</b><br>" + esc(status) + "<br>" +
                     esc(checkoutDate.isBlank() ? bookingDate : checkoutDate) +
                     "</div></div>" +
 
@@ -1526,10 +1475,8 @@ public class HotelServer {
                     "<div class='invoice-total'>" +
                     "<span>Room Total</span><b>INR " +
                     String.format(Locale.US, "%.2f", roomTotal) + "</b>" +
-
                     "<span>Services</span><b>INR " +
                     String.format(Locale.US, "%.2f", serviceTotal) + "</b>" +
-
                     "<span>Grand Total</span><strong>INR " +
                     String.format(Locale.US, "%.2f", grandTotal) +
                     "</strong></div>" +
@@ -1548,7 +1495,7 @@ public class HotelServer {
     }
 
     // ==================================================
-    // SAVE INVOICE AS PDF
+    // INVOICE PDF
     // ==================================================
 
     private static void invoicePdf(HttpExchange exchange)
@@ -1560,9 +1507,7 @@ public class HotelServer {
         }
 
         int bookingId = intValue(
-                getQueryValue(exchange, "booking_id"),
-                0
-        );
+                getQueryValue(exchange, "booking_id"), 0);
 
         if (bookingId <= 0) {
             sendError(exchange, "Invalid booking ID.");
@@ -1625,11 +1570,7 @@ public class HotelServer {
 
             byte[] pdf = simplePdf(lines);
 
-            exchange.getResponseHeaders().set(
-                    "Content-Type",
-                    "application/pdf"
-            );
-
+            exchange.getResponseHeaders().set("Content-Type", "application/pdf");
             exchange.getResponseHeaders().set(
                     "Content-Disposition",
                     "attachment; filename=\"invoice-" + bookingId + ".pdf\""
@@ -1652,9 +1593,7 @@ public class HotelServer {
 
     private static String esc(String value) {
 
-        if (value == null) {
-            return "";
-        }
+        if (value == null) return "";
 
         return value
                 .replace("&", "&amp;")
@@ -1677,36 +1616,25 @@ public class HotelServer {
 
         for (int i = 0; i < lines.size(); i++) {
 
-            if (i > 0) {
-                stream.append("0 -28 Td ");
-            }
+            if (i > 0) stream.append("0 -28 Td ");
 
             String safe = lines.get(i)
                     .replace("\\", "\\\\")
                     .replace("(", "\\(")
                     .replace(")", "\\)");
 
-            stream.append("(")
-                    .append(safe)
-                    .append(") Tj ");
+            stream.append("(").append(safe).append(") Tj ");
         }
 
         stream.append("ET");
 
         String[] objects = {
-
                 "<< /Type /Catalog /Pages 2 0 R >>",
-
                 "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
-
-                "<< /Type /Page /Parent 2 0 R " +
-                "/MediaBox [0 0 595 842] " +
-                "/Resources << /Font << /F1 5 0 R >> >> " +
-                "/Contents 4 0 R >>",
-
-                "<< /Length " + stream.length() + " >>\n" +
-                "stream\n" + stream + "\nendstream",
-
+                "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] " +
+                "/Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>",
+                "<< /Length " + stream.length() + " >>\nstream\n" +
+                stream + "\nendstream",
                 "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>"
         };
 
@@ -1764,11 +1692,15 @@ public class HotelServer {
     private static void pricingData(HttpExchange exchange)
             throws IOException {
 
+        if (!isGet(exchange)) {
+            sendError(exchange, "Invalid request.");
+            return;
+        }
+
         try (Connection con = DatabaseConnection.getConnection()) {
 
             StringBuilder json = new StringBuilder("{");
 
-            // Room types
             json.append("\"roomTypes\":[");
 
             try (PreparedStatement ps = con.prepareStatement(
@@ -1799,7 +1731,6 @@ public class HotelServer {
 
             json.append("],\"floors\":[");
 
-            // Floors
             try (PreparedStatement ps = con.prepareStatement(
                     "SELECT floor_number,MAX(room_type) AS room_type " +
                     "FROM rooms WHERE hotel_id=? " +
@@ -1829,7 +1760,6 @@ public class HotelServer {
 
             json.append("],\"services\":[");
 
-            // Service catalogue
             try (PreparedStatement ps = con.prepareStatement(
                     "SELECT service_name,price FROM service_prices " +
                     "WHERE hotel_id=? ORDER BY service_name")) {
@@ -1860,9 +1790,7 @@ public class HotelServer {
             sendJson(exchange, json.toString());
 
         } catch (Exception e) {
-            sendJson(exchange,
-                    "{\"success\":false,\"message\":\"" +
-                    jsonEscape(e.getMessage()) + "\"}");
+            sendError(exchange, e.getMessage());
         }
     }
 
@@ -1873,13 +1801,18 @@ public class HotelServer {
     private static void updateRoomPrices(HttpExchange exchange)
             throws IOException {
 
+        if (!isPost(exchange)) {
+            sendError(exchange, "Invalid request.");
+            return;
+        }
+
         Map<String, String> data = parseForm(readBody(exchange));
 
         String roomType = data.getOrDefault("roomType", "").trim();
         double price = doubleValue(data.get("price"), -1);
 
         if (roomType.isBlank() || price < 0) {
-            sendJson(exchange, "{\"success\":false,\"message\":\"Enter a valid room type and price.\"}");
+            sendError(exchange, "Enter a valid room type and price.");
             return;
         }
 
@@ -1887,35 +1820,40 @@ public class HotelServer {
 
             con.setAutoCommit(false);
 
-            try (PreparedStatement ps = con.prepareStatement(
-                    "UPDATE room_types SET price=? " +
-                    "WHERE hotel_id=? AND room_type=?")) {
+            try {
+                try (PreparedStatement ps = con.prepareStatement(
+                        "UPDATE room_types SET price=? " +
+                        "WHERE hotel_id=? AND room_type=?")) {
 
-                ps.setDouble(1, price);
-                ps.setInt(2, HOTEL_ID);
-                ps.setString(3, roomType);
+                    ps.setDouble(1, price);
+                    ps.setInt(2, HOTEL_ID);
+                    ps.setString(3, roomType);
 
-                if (ps.executeUpdate() == 0) {
-                    throw new SQLException("Room type not found.");
+                    if (ps.executeUpdate() == 0) {
+                        throw new SQLException("Room type not found.");
+                    }
                 }
+
+                try (PreparedStatement ps = con.prepareStatement(
+                        "UPDATE rooms SET price=? " +
+                        "WHERE hotel_id=? AND room_type=?")) {
+
+                    ps.setDouble(1, price);
+                    ps.setInt(2, HOTEL_ID);
+                    ps.setString(3, roomType);
+                    ps.executeUpdate();
+                }
+
+                con.commit();
+                sendSuccess(exchange, "Room price updated.");
+
+            } catch (Exception e) {
+                con.rollback();
+                throw e;
             }
-
-            try (PreparedStatement ps = con.prepareStatement(
-                    "UPDATE rooms SET price=? " +
-                    "WHERE hotel_id=? AND room_type=?")) {
-
-                ps.setDouble(1, price);
-                ps.setInt(2, HOTEL_ID);
-                ps.setString(3, roomType);
-                ps.executeUpdate();
-            }
-
-            con.commit();
-            sendJson(exchange, "{\"success\":true,\"message\":\"Room price updated.\"}");
 
         } catch (Exception e) {
-            sendJson(exchange, "{\"success\":false,\"message\":\"" +
-                    jsonEscape(e.getMessage()) + "\"}");
+            sendError(exchange, e.getMessage());
         }
     }
 
@@ -1926,13 +1864,21 @@ public class HotelServer {
     private static void renameRoomType(HttpExchange exchange)
             throws IOException {
 
+        if (!isPost(exchange)) {
+            sendError(exchange, "Invalid request.");
+            return;
+        }
+
         Map<String, String> data = parseForm(readBody(exchange));
 
-        String oldName = data.getOrDefault("oldRoomType", "").trim();
-        String newName = data.getOrDefault("newRoomType", "").trim();
+        String oldName =
+                data.getOrDefault("oldRoomType", "").trim();
+
+        String newName =
+                data.getOrDefault("newRoomType", "").trim();
 
         if (oldName.isBlank() || newName.isBlank()) {
-            sendJson(exchange, "{\"success\":false,\"message\":\"Enter both room type names.\"}");
+            sendError(exchange, "Enter both room type names.");
             return;
         }
 
@@ -1940,35 +1886,40 @@ public class HotelServer {
 
             con.setAutoCommit(false);
 
-            try (PreparedStatement ps = con.prepareStatement(
-                    "UPDATE rooms SET room_type=? " +
-                    "WHERE hotel_id=? AND room_type=?")) {
+            try {
+                try (PreparedStatement ps = con.prepareStatement(
+                        "UPDATE rooms SET room_type=? " +
+                        "WHERE hotel_id=? AND room_type=?")) {
 
-                ps.setString(1, newName);
-                ps.setInt(2, HOTEL_ID);
-                ps.setString(3, oldName);
-                ps.executeUpdate();
-            }
-
-            try (PreparedStatement ps = con.prepareStatement(
-                    "UPDATE room_types SET room_type=? " +
-                    "WHERE hotel_id=? AND room_type=?")) {
-
-                ps.setString(1, newName);
-                ps.setInt(2, HOTEL_ID);
-                ps.setString(3, oldName);
-
-                if (ps.executeUpdate() == 0) {
-                    throw new SQLException("Room type not found.");
+                    ps.setString(1, newName);
+                    ps.setInt(2, HOTEL_ID);
+                    ps.setString(3, oldName);
+                    ps.executeUpdate();
                 }
-            }
 
-            con.commit();
-            sendJson(exchange, "{\"success\":true,\"message\":\"Room type renamed.\"}");
+                try (PreparedStatement ps = con.prepareStatement(
+                        "UPDATE room_types SET room_type=? " +
+                        "WHERE hotel_id=? AND room_type=?")) {
+
+                    ps.setString(1, newName);
+                    ps.setInt(2, HOTEL_ID);
+                    ps.setString(3, oldName);
+
+                    if (ps.executeUpdate() == 0) {
+                        throw new SQLException("Room type not found.");
+                    }
+                }
+
+                con.commit();
+                sendSuccess(exchange, "Room type renamed.");
+
+            } catch (Exception e) {
+                con.rollback();
+                throw e;
+            }
 
         } catch (Exception e) {
-            sendJson(exchange, "{\"success\":false,\"message\":\"" +
-                    jsonEscape(e.getMessage()) + "\"}");
+            sendError(exchange, e.getMessage());
         }
     }
 
@@ -1979,30 +1930,35 @@ public class HotelServer {
     private static void addService(HttpExchange exchange)
             throws IOException {
 
+        if (!isPost(exchange)) {
+            sendError(exchange, "Invalid request.");
+            return;
+        }
+
         Map<String, String> data = parseForm(readBody(exchange));
 
         String name = data.getOrDefault("serviceName", "").trim();
         double price = doubleValue(data.get("price"), -1);
 
         if (name.isBlank() || price < 0) {
-            sendJson(exchange, "{\"success\":false,\"message\":\"Enter a valid service name and price.\"}");
+            sendError(exchange, "Enter a valid service name and price.");
             return;
         }
 
         try (Connection con = DatabaseConnection.getConnection();
              PreparedStatement ps = con.prepareStatement(
-                     "INSERT INTO service_prices (hotel_id,service_name,price) VALUES(?,?,?)")) {
+                     "INSERT INTO service_prices " +
+                     "(hotel_id,service_name,price) VALUES(?,?,?)")) {
 
             ps.setInt(1, HOTEL_ID);
             ps.setString(2, name);
             ps.setDouble(3, price);
             ps.executeUpdate();
 
-            sendJson(exchange, "{\"success\":true,\"message\":\"Service added.\"}");
+            sendSuccess(exchange, "Service added.");
 
         } catch (Exception e) {
-            sendJson(exchange, "{\"success\":false,\"message\":\"" +
-                    jsonEscape(e.getMessage()) + "\"}");
+            sendError(exchange, e.getMessage());
         }
     }
 
@@ -2013,13 +1969,18 @@ public class HotelServer {
     private static void updateServicePrice(HttpExchange exchange)
             throws IOException {
 
+        if (!isPost(exchange)) {
+            sendError(exchange, "Invalid request.");
+            return;
+        }
+
         Map<String, String> data = parseForm(readBody(exchange));
 
         String name = data.getOrDefault("serviceName", "").trim();
         double price = doubleValue(data.get("price"), -1);
 
         if (name.isBlank() || price < 0) {
-            sendJson(exchange, "{\"success\":false,\"message\":\"Enter a valid service and price.\"}");
+            sendError(exchange, "Enter a valid service and price.");
             return;
         }
 
@@ -2033,15 +1994,14 @@ public class HotelServer {
             ps.setString(3, name);
 
             if (ps.executeUpdate() == 0) {
-                sendJson(exchange, "{\"success\":false,\"message\":\"Service not found.\"}");
+                sendError(exchange, "Service not found.");
                 return;
             }
 
-            sendJson(exchange, "{\"success\":true,\"message\":\"Service price updated.\"}");
+            sendSuccess(exchange, "Service price updated.");
 
         } catch (Exception e) {
-            sendJson(exchange, "{\"success\":false,\"message\":\"" +
-                    jsonEscape(e.getMessage()) + "\"}");
+            sendError(exchange, e.getMessage());
         }
     }
 
@@ -2052,13 +2012,21 @@ public class HotelServer {
     private static void renameService(HttpExchange exchange)
             throws IOException {
 
+        if (!isPost(exchange)) {
+            sendError(exchange, "Invalid request.");
+            return;
+        }
+
         Map<String, String> data = parseForm(readBody(exchange));
 
-        String oldName = data.getOrDefault("oldServiceName", "").trim();
-        String newName = data.getOrDefault("newServiceName", "").trim();
+        String oldName =
+                data.getOrDefault("oldServiceName", "").trim();
+
+        String newName =
+                data.getOrDefault("newServiceName", "").trim();
 
         if (oldName.isBlank() || newName.isBlank()) {
-            sendJson(exchange, "{\"success\":false,\"message\":\"Enter both service names.\"}");
+            sendError(exchange, "Enter both service names.");
             return;
         }
 
@@ -2072,15 +2040,14 @@ public class HotelServer {
             ps.setString(3, oldName);
 
             if (ps.executeUpdate() == 0) {
-                sendJson(exchange, "{\"success\":false,\"message\":\"Service not found.\"}");
+                sendError(exchange, "Service not found.");
                 return;
             }
 
-            sendJson(exchange, "{\"success\":true,\"message\":\"Service renamed.\"}");
+            sendSuccess(exchange, "Service renamed.");
 
         } catch (Exception e) {
-            sendJson(exchange, "{\"success\":false,\"message\":\"" +
-                    jsonEscape(e.getMessage()) + "\"}");
+            sendError(exchange, e.getMessage());
         }
     }
 
@@ -2091,12 +2058,17 @@ public class HotelServer {
     private static void deleteService(HttpExchange exchange)
             throws IOException {
 
+        if (!isPost(exchange)) {
+            sendError(exchange, "Invalid request.");
+            return;
+        }
+
         Map<String, String> data = parseForm(readBody(exchange));
 
         String name = data.getOrDefault("serviceName", "").trim();
 
         if (name.isBlank()) {
-            sendJson(exchange, "{\"success\":false,\"message\":\"Select a service.\"}");
+            sendError(exchange, "Select a service.");
             return;
         }
 
@@ -2109,51 +2081,136 @@ public class HotelServer {
             ps.setString(2, name);
 
             if (ps.executeUpdate() == 0) {
-                sendJson(exchange, "{\"success\":false,\"message\":\"Service not found.\"}");
+                sendError(exchange, "Service not found.");
                 return;
             }
 
-            sendJson(exchange, "{\"success\":true,\"message\":\"Service deleted.\"}");
+            sendSuccess(exchange, "Service deleted.");
 
         } catch (Exception e) {
-            sendJson(exchange, "{\"success\":false,\"message\":\"" +
-                    jsonEscape(e.getMessage()) + "\"}");
+            sendError(exchange, e.getMessage());
         }
     }
 
     // ==================================================
-    // CHANGE PASSWORD
+    // CHANGE PASSWORD - DATABASE BACKED
     // ==================================================
 
     private static void changePassword(HttpExchange exchange)
             throws IOException {
 
-        Map<String, String> data = parseForm(readBody(exchange));
-
-        String oldPassword = data.getOrDefault("oldPassword", "");
-        String newPassword = data.getOrDefault("newPassword", "");
-        String confirmPassword = data.getOrDefault("confirmPassword", "");
-
-        if (!oldPassword.equals("admin123")) {
-            sendJson(exchange, "{\"success\":false,\"message\":\"Current password is incorrect.\"}");
+        if (!isPost(exchange)) {
+            sendError(exchange, "Invalid request.");
             return;
         }
 
-        if (newPassword.length() < 6) {
-            sendJson(exchange, "{\"success\":false,\"message\":\"New password must contain at least 6 characters.\"}");
+        Map<String, String> data = parseForm(readBody(exchange));
+
+        String oldPassword =
+                data.getOrDefault("oldPassword", "");
+
+        String newPassword =
+                data.getOrDefault("newPassword", "");
+
+        String confirmPassword =
+                data.getOrDefault("confirmPassword", "");
+
+        if (oldPassword.isEmpty() ||
+                newPassword.isEmpty() ||
+                confirmPassword.isEmpty()) {
+
+            sendError(exchange, "Please fill in all password fields.");
+            return;
+        }
+
+        if (newPassword.length() < 8) {
+            sendError(exchange, "New password must contain at least 8 characters.");
             return;
         }
 
         if (!newPassword.equals(confirmPassword)) {
-            sendJson(exchange, "{\"success\":false,\"message\":\"New passwords do not match.\"}");
+            sendError(exchange, "New passwords do not match.");
             return;
         }
 
-        // The existing login in this project uses admin/admin123.
-        // A database-backed password system must be implemented
-        // consistently in both login and password-change handlers.
-        sendJson(exchange,
-                "{\"success\":false,\"message\":\"Password change is not enabled for the current login setup.\"}");
+        if (oldPassword.equals(newPassword)) {
+            sendError(exchange, "New password must be different from the current password.");
+            return;
+        }
+
+        String selectSQL =
+                "SELECT password_hash,password_salt " +
+                "FROM hotels WHERE hotel_id=?";
+
+        String updateSQL =
+                "UPDATE hotels SET password_hash=?,password_salt=? " +
+                "WHERE hotel_id=?";
+
+        try (Connection con = DatabaseConnection.getConnection()) {
+
+            con.setAutoCommit(false);
+
+            try {
+                String storedHash;
+                String storedSalt;
+
+                try (PreparedStatement ps =
+                             con.prepareStatement(selectSQL)) {
+
+                    ps.setInt(1, HOTEL_ID);
+
+                    try (ResultSet rs = ps.executeQuery()) {
+
+                        if (!rs.next()) {
+                            throw new SQLException("Hotel account not found.");
+                        }
+
+                        storedHash = rs.getString("password_hash");
+                        storedSalt = rs.getString("password_salt");
+                    }
+                }
+
+                if (!verifyPassword(
+                        oldPassword,
+                        storedHash,
+                        storedSalt)) {
+
+                    throw new IllegalArgumentException(
+                            "Current password is incorrect.");
+                }
+
+                byte[] newSalt = generateSalt();
+                String newHash = hashPassword(newPassword, newSalt);
+
+                String encodedSalt =
+                        Base64.getEncoder().encodeToString(newSalt);
+
+                try (PreparedStatement ps =
+                             con.prepareStatement(updateSQL)) {
+
+                    ps.setString(1, newHash);
+                    ps.setString(2, encodedSalt);
+                    ps.setInt(3, HOTEL_ID);
+
+                    if (ps.executeUpdate() != 1) {
+                        throw new SQLException("Password could not be updated.");
+                    }
+                }
+
+                con.commit();
+                sendSuccess(exchange, "Password changed successfully.");
+
+            } catch (Exception e) {
+                con.rollback();
+                throw e;
+
+            } finally {
+                con.setAutoCommit(true);
+            }
+
+        } catch (Exception e) {
+            sendError(exchange, e.getMessage());
+        }
     }
 
     // ==================================================
@@ -2163,16 +2220,22 @@ public class HotelServer {
     private static void hotelInfo(HttpExchange exchange)
             throws IOException {
 
+        if (!isGet(exchange)) {
+            sendError(exchange, "Invalid request.");
+            return;
+        }
+
         try (Connection con = DatabaseConnection.getConnection();
              PreparedStatement ps = con.prepareStatement(
-                     "SELECT hotel_name,username,email FROM hotels WHERE hotel_id=?")) {
+                     "SELECT hotel_name,username,email " +
+                     "FROM hotels WHERE hotel_id=?")) {
 
             ps.setInt(1, HOTEL_ID);
 
             try (ResultSet rs = ps.executeQuery()) {
 
                 if (!rs.next()) {
-                    sendJson(exchange, "{\"success\":false,\"message\":\"Hotel information not found.\"}");
+                    sendError(exchange, "Hotel information not found.");
                     return;
                 }
 
@@ -2185,14 +2248,420 @@ public class HotelServer {
             }
 
         } catch (Exception e) {
-            sendJson(exchange, "{\"success\":false,\"message\":\"" +
-                    jsonEscape(e.getMessage()) + "\"}");
+            sendError(exchange, e.getMessage());
         }
     }
-    
+
+    // ==================================================
+    // ADD FLOOR
+    // ==================================================
+
+    private static void addFloor(HttpExchange exchange)
+            throws IOException {
+
+        if (!isPost(exchange)) {
+            sendError(exchange, "POST request required.");
+            return;
+        }
+
+        Map<String, String> form = parseForm(readBody(exchange));
+
+        int floorNumber = intValue(form.get("floorNumber"), -1);
+        int roomsCount = intValue(form.get("roomsCount"), -1);
+
+        String floorName = form.get("floorName");
+        String roomType = form.get("roomType");
+
+        if (floorNumber < 1 || floorNumber > 21474835 ||
+                roomsCount < 1 || roomsCount > 99 ||
+                floorName == null || floorName.trim().isEmpty() ||
+                roomType == null || roomType.trim().isEmpty()) {
+
+            sendError(exchange, "Please enter valid floor details.");
+            return;
+        }
+
+        try (Connection connection = DatabaseConnection.getConnection()) {
+
+            connection.setAutoCommit(false);
+
+            try {
+                String checkFloor =
+                        "SELECT floor_number FROM hotel_floors " +
+                        "WHERE hotel_id=? AND floor_number=?";
+
+                try (PreparedStatement ps = connection.prepareStatement(checkFloor)) {
+
+                    ps.setInt(1, HOTEL_ID);
+                    ps.setInt(2, floorNumber);
+
+                    try (ResultSet rs = ps.executeQuery()) {
+                        if (rs.next()) {
+                            throw new SQLException("This floor already exists.");
+                        }
+                    }
+                }
+
+                String insertFloor =
+                        "INSERT INTO hotel_floors " +
+                        "(hotel_id,floor_number,floor_name) VALUES(?,?,?)";
+
+                try (PreparedStatement ps = connection.prepareStatement(insertFloor)) {
+
+                    ps.setInt(1, HOTEL_ID);
+                    ps.setInt(2, floorNumber);
+                    ps.setString(3, floorName.trim());
+                    ps.executeUpdate();
+                }
+
+                createRooms(connection, floorNumber, roomsCount, roomType);
+
+                connection.commit();
+
+                sendJson(exchange,
+                        "{\"success\":true,\"roomsCreated\":" + roomsCount +
+                        ",\"message\":\"Floor and rooms added successfully.\"}");
+
+            } catch (Exception e) {
+                connection.rollback();
+                throw e;
+            }
+
+        } catch (Exception e) {
+            sendError(exchange, e.getMessage());
+        }
+    }
+
+    // ==================================================
+    // DELETE FLOOR
+    // ==================================================
+
+    private static void deleteFloor(HttpExchange exchange)
+            throws IOException {
+
+        if (!isPost(exchange)) {
+            sendError(exchange, "POST request required.");
+            return;
+        }
+
+        Map<String, String> form = parseForm(readBody(exchange));
+
+        int floorNumber = intValue(form.get("floorNumber"), -1);
+
+        if (floorNumber < 1) {
+            sendError(exchange, "Invalid floor number.");
+            return;
+        }
+
+        try (Connection connection = DatabaseConnection.getConnection()) {
+
+            connection.setAutoCommit(false);
+
+            try {
+                String checkBookings =
+                        "SELECT COUNT(*) FROM bookings b " +
+                        "JOIN rooms r ON b.hotel_id=r.hotel_id " +
+                        "AND b.room_number=r.room_number " +
+                        "WHERE r.hotel_id=? AND r.floor_number=?";
+
+                try (PreparedStatement ps = connection.prepareStatement(checkBookings)) {
+
+                    ps.setInt(1, HOTEL_ID);
+                    ps.setInt(2, floorNumber);
+
+                    try (ResultSet rs = ps.executeQuery()) {
+                        if (rs.next() && rs.getInt(1) > 0) {
+                            throw new SQLException(
+                                    "This floor contains booking history and cannot be deleted.");
+                        }
+                    }
+                }
+
+                try (PreparedStatement ps = connection.prepareStatement(
+                        "DELETE FROM rooms WHERE hotel_id=? AND floor_number=?")) {
+
+                    ps.setInt(1, HOTEL_ID);
+                    ps.setInt(2, floorNumber);
+                    ps.executeUpdate();
+                }
+
+                int deleted;
+
+                try (PreparedStatement ps = connection.prepareStatement(
+                        "DELETE FROM hotel_floors WHERE hotel_id=? AND floor_number=?")) {
+
+                    ps.setInt(1, HOTEL_ID);
+                    ps.setInt(2, floorNumber);
+                    deleted = ps.executeUpdate();
+                }
+
+                if (deleted == 0) {
+                    throw new SQLException("Floor not found.");
+                }
+
+                connection.commit();
+                sendSuccess(exchange, "Floor deleted successfully.");
+
+            } catch (Exception e) {
+                connection.rollback();
+                throw e;
+            }
+
+        } catch (Exception e) {
+            sendError(exchange, e.getMessage());
+        }
+    }
+
+    // ==================================================
+    // ADD ROOMS TO A FLOOR
+    // ==================================================
+
+    private static void addRooms(HttpExchange exchange)
+            throws IOException {
+
+        if (!isPost(exchange)) {
+            sendError(exchange, "POST request required.");
+            return;
+        }
+
+        Map<String, String> form = parseForm(readBody(exchange));
+
+        int floorNumber = intValue(form.get("floorNumber"), -1);
+        int roomsCount = intValue(form.get("roomsCount"), -1);
+        String roomType = form.get("roomType");
+
+        if (floorNumber < 1 ||
+                roomsCount < 1 || roomsCount > 99 ||
+                roomType == null || roomType.trim().isEmpty()) {
+
+            sendError(exchange, "Please enter valid room details.");
+            return;
+        }
+
+        try (Connection connection = DatabaseConnection.getConnection()) {
+
+            connection.setAutoCommit(false);
+
+            try {
+                String checkFloor =
+                        "SELECT floor_number FROM hotel_floors " +
+                        "WHERE hotel_id=? AND floor_number=?";
+
+                try (PreparedStatement ps = connection.prepareStatement(checkFloor)) {
+
+                    ps.setInt(1, HOTEL_ID);
+                    ps.setInt(2, floorNumber);
+
+                    try (ResultSet rs = ps.executeQuery()) {
+                        if (!rs.next()) {
+                            throw new SQLException("Selected floor does not exist.");
+                        }
+                    }
+                }
+
+                createRooms(connection, floorNumber, roomsCount, roomType);
+
+                connection.commit();
+
+                sendJson(exchange,
+                        "{\"success\":true,\"roomsCreated\":" + roomsCount +
+                        ",\"message\":\"Rooms added successfully.\"}");
+
+            } catch (Exception e) {
+                connection.rollback();
+                throw e;
+            }
+
+        } catch (Exception e) {
+            sendError(exchange, e.getMessage());
+        }
+    }
+
+    // ==================================================
+    // ADD ROOMS TO EVERY FLOOR
+    // ==================================================
+
+    private static void addRoomsEveryFloor(HttpExchange exchange)
+            throws IOException {
+
+        if (!isPost(exchange)) {
+            sendError(exchange, "POST request required.");
+            return;
+        }
+
+        Map<String, String> form = parseForm(readBody(exchange));
+
+        int roomsPerFloor = intValue(form.get("roomsPerFloor"), -1);
+        String roomType = form.get("roomType");
+
+        if (roomsPerFloor < 1 || roomsPerFloor > 99 ||
+                roomType == null || roomType.trim().isEmpty()) {
+
+            sendError(exchange, "Please enter valid room details.");
+            return;
+        }
+
+        try (Connection connection = DatabaseConnection.getConnection()) {
+
+            connection.setAutoCommit(false);
+
+            try {
+                List<Integer> floors = new ArrayList<>();
+
+                try (PreparedStatement ps = connection.prepareStatement(
+                        "SELECT floor_number FROM hotel_floors " +
+                        "WHERE hotel_id=? ORDER BY floor_number")) {
+
+                    ps.setInt(1, HOTEL_ID);
+
+                    try (ResultSet rs = ps.executeQuery()) {
+                        while (rs.next()) {
+                            floors.add(rs.getInt("floor_number"));
+                        }
+                    }
+                }
+
+                if (floors.isEmpty()) {
+                    throw new SQLException("No floors are available.");
+                }
+
+                int totalRoomsCreated = 0;
+
+                for (int floorNumber : floors) {
+                    createRooms(connection, floorNumber, roomsPerFloor, roomType);
+                    totalRoomsCreated += roomsPerFloor;
+                }
+
+                connection.commit();
+
+                sendJson(exchange,
+                        "{\"success\":true,\"roomsCreated\":" + totalRoomsCreated +
+                        ",\"message\":\"" + totalRoomsCreated +
+                        " rooms added across " + floors.size() +
+                        " floors successfully.\"}");
+
+            } catch (Exception e) {
+                connection.rollback();
+                throw e;
+            }
+
+        } catch (Exception e) {
+            sendError(exchange, e.getMessage());
+        }
+    }
+
+    // ==================================================
+    // SHARED ROOM CREATION HELPER
+    // ==================================================
+
+    private static void createRooms(
+            Connection connection,
+            int floorNumber,
+            int roomsCount,
+            String roomType) throws SQLException {
+
+        double price;
+
+        String priceQuery =
+                "SELECT price FROM room_types " +
+                "WHERE hotel_id=? AND room_type=?";
+
+        try (PreparedStatement ps = connection.prepareStatement(priceQuery)) {
+
+            ps.setInt(1, HOTEL_ID);
+            ps.setString(2, roomType.trim());
+
+            try (ResultSet rs = ps.executeQuery()) {
+
+                if (!rs.next()) {
+                    throw new SQLException("Selected room type does not exist.");
+                }
+
+                price = rs.getDouble("price");
+            }
+        }
+
+        int lastSuffix = 0;
+
+        String numberQuery =
+                "SELECT COALESCE(MAX(MOD(room_number,100)),0) " +
+                "FROM rooms WHERE hotel_id=? AND floor_number=?";
+
+        try (PreparedStatement ps = connection.prepareStatement(numberQuery)) {
+
+            ps.setInt(1, HOTEL_ID);
+            ps.setInt(2, floorNumber);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    lastSuffix = rs.getInt(1);
+                }
+            }
+        }
+
+        if (lastSuffix + roomsCount > 99) {
+            throw new SQLException(
+                    "A floor can have a maximum of 99 numbered rooms.");
+        }
+
+        String insertRoom =
+                "INSERT INTO rooms " +
+                "(room_number,floor_number,room_type,price,available,hotel_id) " +
+                "VALUES(?,?,?,?,1,?)";
+
+        try (PreparedStatement ps = connection.prepareStatement(insertRoom)) {
+
+            for (int i = 1; i <= roomsCount; i++) {
+
+                int roomNumber =
+                        floorNumber * 100 + lastSuffix + i;
+
+                ps.setInt(1, roomNumber);
+                ps.setInt(2, floorNumber);
+                ps.setString(3, roomType.trim());
+                ps.setDouble(4, price);
+                ps.setInt(5, HOTEL_ID);
+
+                ps.addBatch();
+            }
+
+            ps.executeBatch();
+        }
+    }
+
+    // ==================================================
+    // MESSAGE PAGE
+    // ==================================================
+
+    private static String messagePage(
+            String title,
+            String message,
+            String link,
+            String linkText) {
+
+        return "<!DOCTYPE html>" +
+                "<html lang='en'>" +
+                "<head>" +
+                "<meta charset='UTF-8'>" +
+                "<meta name='viewport' content='width=device-width, initial-scale=1.0'>" +
+                "<title>" + esc(title) + " | Grand Stay</title>" +
+                "<style>" +
+                "body{margin:0;min-height:100vh;display:grid;place-items:center;" +
+                "font-family:Arial,sans-serif;background:#18211f;color:#fff;}" +
+                ".card{width:min(420px,85%);padding:35px;border-radius:16px;" +
+                "background:#202a29;border:1px solid #34413e;text-align:center;}" +
+                "h1{color:#83c99e;}p{color:#c2cbc7;line-height:1.6;}" +
+                "a{display:inline-block;margin-top:18px;padding:12px 22px;" +
+                "border-radius:8px;background:#83c99e;color:#18211f;" +
+                "text-decoration:none;font-weight:bold;}" +
+                "</style></head><body><div class='card'>" +
+                "<h1>" + esc(title) + "</h1>" +
+                "<p>" + esc(message) + "</p>" +
+                "<a href='" + esc(link) + "'>" + esc(linkText) + "</a>" +
+                "</div></body></html>";
+    }
 
     // ==================================================
     // END OF HOTEL SERVER
     // ==================================================
-
 }
