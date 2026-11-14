@@ -1,4 +1,3 @@
-
 package com.hotel;
 
 import com.sun.net.httpserver.HttpExchange;
@@ -532,7 +531,6 @@ public class HotelServer {
 
         String password =
                 data.getOrDefault("password", "");
-
         if (username.isEmpty() || password.isEmpty()) {
             sendHtml(exchange, messagePage(
                     "Login Failed",
@@ -990,7 +988,9 @@ public class HotelServer {
         }
 
         Map<String, String> data = parseForm(readBody(exchange));
-        int bookingId = intValue(data.get("bookingId"), 0);
+        int bookingId = intValue(
+                data.getOrDefault("booking_id",
+                        data.getOrDefault("bookingId", "0")), 0);
 
         if (bookingId <= 0) {
             sendError(exchange, "Invalid booking ID.");
@@ -1048,8 +1048,7 @@ public class HotelServer {
 
                 con.commit();
 
-                redirect(exchange, "/bookings.html?success=" +
-                        urlEncode("Booking cancelled successfully."));
+                sendSuccess(exchange, "Booking cancelled successfully.");
 
             } catch (Exception e) {
                 con.rollback();
@@ -1074,7 +1073,9 @@ public class HotelServer {
         }
 
         Map<String, String> data = parseForm(readBody(exchange));
-        int bookingId = intValue(data.get("bookingId"), 0);
+        int bookingId = intValue(
+                data.getOrDefault("booking_id",
+                        data.getOrDefault("bookingId", "0")), 0);
 
         if (bookingId <= 0) {
             sendError(exchange, "Invalid booking ID.");
@@ -1131,7 +1132,9 @@ public class HotelServer {
                 }
 
                 con.commit();
-                redirect(exchange, "/invoice?booking_id=" + bookingId);
+                sendJson(exchange,
+                        "{\"success\":true,\"message\":\"Checkout successful.\"," +
+                        "\"invoiceUrl\":\"/invoice?booking_id=" + bookingId + "\"}");
 
             } catch (Exception e) {
                 con.rollback();
@@ -1157,11 +1160,15 @@ public class HotelServer {
 
         Map<String, String> data = parseForm(readBody(exchange));
 
-        int bookingId = intValue(data.get("bookingId"), 0);
+        int bookingId = intValue(
+                data.getOrDefault("booking_id",
+                        data.getOrDefault("bookingId", "0")), 0);
         int quantity = intValue(data.get("quantity"), 1);
 
-        String serviceName =
-                data.getOrDefault("serviceName", "").trim();
+        String serviceName = data.getOrDefault(
+                "service_name",
+                data.getOrDefault("serviceName", "")
+        ).trim();
 
         if (bookingId <= 0 || quantity <= 0 || serviceName.isBlank()) {
             sendError(exchange, "Please select a valid service and quantity.");
@@ -1235,8 +1242,7 @@ public class HotelServer {
 
                 con.commit();
 
-                redirect(exchange, "/bookings.html?success=" +
-                        urlEncode("Service added successfully."));
+                sendSuccess(exchange, "Service added successfully.");
 
             } catch (Exception e) {
                 con.rollback();
@@ -1564,8 +1570,8 @@ public class HotelServer {
             lines.add("Room: " + room);
             lines.add("Nights: " + days);
             lines.add("Status: " + status);
-            lines.add("Room total: INR " + String.format(Locale.US, "%.2f", roomTotal));
-            lines.add("Services: INR " + String.format(Locale.US, "%.2f", serviceTotal));
+            lines.add("Room total: INR " + String.format(Locale.US, "%.2f\n", roomTotal));
+            lines.add("Services: INR " + String.format(Locale.US, "%.2f\n", serviceTotal));
             lines.add("Grand total: INR " + String.format(Locale.US, "%.2f", grandTotal));
 
             byte[] pdf = simplePdf(lines);
@@ -1594,7 +1600,6 @@ public class HotelServer {
     private static String esc(String value) {
 
         if (value == null) return "";
-
         return value
                 .replace("&", "&amp;")
                 .replace("<", "&lt;")
